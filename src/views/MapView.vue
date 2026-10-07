@@ -28,6 +28,8 @@ async function renderMap() {
   const Leaflet = L.default ?? L
 
   map = Leaflet.map(mapContainer.value)
+  // In basso a destra il pulsante + coprirebbe l'attribuzione di OpenStreetMap (obbligatoria).
+  map.attributionControl.setPosition('topright')
   Leaflet.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
     maxZoom: 19,
@@ -91,7 +93,8 @@ onBeforeUnmount(destroyMap)
 </script>
 
 <template>
-  <div class="flex h-dvh flex-col pb-16">
+  <!-- Altezza = schermo meno intestazione (69 px); pb-16 lascia spazio al menu in basso. -->
+  <div class="flex h-[calc(100dvh-69px)] flex-col pb-16">
     <div class="flex items-center gap-4 border-b border-rame/20 p-2 text-sm">
       <span><span class="text-feccia">●</span> Vino</span>
       <span><span class="text-luppolo">●</span> Birra</span>
@@ -111,6 +114,8 @@ onBeforeUnmount(destroyMap)
       Nessuna bottiglia con posizione.
     </p>
 
-    <div v-else ref="mapContainer" class="flex-1"></div>
+    <!-- `isolate`: i livelli di Leaflet (z-index 400+) restano dentro il riquadro e non
+         coprono il menu di navigazione. -->
+    <div v-else ref="mapContainer" class="relative isolate z-0 min-h-0 flex-1"></div>
   </div>
 </template>

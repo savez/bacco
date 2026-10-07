@@ -1,4 +1,5 @@
 import Dexie from 'dexie'
+import { showBanner } from '../composables/useBanner.js'
 import { mergeLegacyTasting } from '../lib/validate.js'
 
 // Database locale (IndexedDB via Dexie). Vedi data-model.md per lo schema completo.
@@ -67,6 +68,51 @@ db.version(3)
       })
     await tx.table('cellarMoves').bulkAdd(firstMoves)
   })
+
+// --- Più finestre aperte -----------------------------------------------------------------
+// Un aggiornamento dello schema aspetta che TUTTE le finestre di Bacco chiudano il database.
+// Se una resta aperta l'aggiornamento si blocca, e con lui ogni lettura e salvataggio: per
+// questo chi riceve la richiesta chiude subito il database e chiede di ricaricare, e chi
+// resta in attesa lo dice invece di restare appeso.
+db.on('versionchange', () => {
+  db.close()
+  showBanner({
+    id: 'db-versionchange',
+    message: 'Bacco è stato aggiornato in un\'altra finestra. Ricarica per continuare.',
+    tone: 'error',
+    priority: 100,
+    actions: [{ label: 'Ricarica', onClick: () => location.reload() }],
+  })
+  return false
+})
+
+db.on('blocked', () => {
+  showBanner({
+    id: 'db-blocked',
+    message: 'Aggiornamento dei dati in attesa: chiudi le altre finestre o schede di Bacco aperte.',
+    tone: 'error',
+    priority: 100,
+  })
+})
+
+/**
+ * Apre il database all'avvio: se non riesce lo dice subito, invece di far restare appeso
+ * il primo salvataggio.
+ */
+export async function openDatabase() {
+  try {
+    await db.open()
+    return true
+  } catch (err) {
+    showBanner({
+      id: 'db-open-error',
+      message: `Impossibile aprire i dati sul dispositivo (${err?.name ?? 'errore'}). Chiudi le altre finestre di Bacco e riaprila.`,
+      tone: 'error',
+      priority: 100,
+    })
+    return false
+  }
+}
 
 /**
  * Richiede l'archiviazione persistente al browser (best-effort): riduce il rischio che il

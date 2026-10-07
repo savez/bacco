@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { RouterLink } from 'vue-router'
+import { takeCellarFilterRequest } from '../lib/homeFilter.js'
 import BottleRow from '../components/BottleRow.vue'
 import ShareCardDialog from '../components/ShareCardDialog.vue'
 import { liveBottles } from '../db/bottles.js'
@@ -15,23 +16,11 @@ const bottles = useLiveQuery(() => liveBottles(), [])
 const sharing = ref(null)
 
 // --- Filtri ---------------------------------------------------------------------------
-const route = useRoute()
-const router = useRouter()
 const query = ref('')
 const type = ref(null)
-// Filtro "In cantina" (specs/002-cellar-inventory): ci si arriva anche dal modulo, dopo aver
-// messo bottiglie in cantina (`/?cantina=1`). Il parametro si legge una volta e si toglie
-// dall'indirizzo, altrimenti riaccenderebbe il filtro a ogni ritorno da una scheda.
-const cellar = ref(false)
-watch(
-  () => route.query.cantina,
-  (value) => {
-    if (value !== '1') return
-    cellar.value = true
-    router.replace({ path: route.path, query: {} })
-  },
-  { immediate: true },
-)
+// Filtro "In cantina" (specs/002-cellar-inventory): già attivo quando si arriva dal modulo
+// dopo aver messo bottiglie in cantina.
+const cellar = ref(takeCellarFilterRequest())
 const year = ref(null)
 const month = ref(null)
 
