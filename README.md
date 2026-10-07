@@ -37,7 +37,7 @@ foto, punteggio, analisi organolettica, abbinamento, luogo e ricordi. Funziona o
   (DOCG, DOC, IGT, IGP), annata, gradazione, analisi organolettica, abbinamento, note.
 - ⭐ **Punteggio da 1 a 5** con le bottiglie al posto delle stelle e una descrizione per ogni livello.
 - 🗂️ **Registro** con ricerca e filtri per tipo, anno e mese.
-- 🍷 **Cantina personale**: registra una bottiglia con 2 o più bottiglie e va in cantina;
+- 🍷 **Cantina personale**: indica quante bottiglie metti in cantina (0 = la bevi subito);
   punteggio e analisi te li chiede al primo stappo. Filtro "In cantina", registro movimenti
   (entrate, uscite, rettifiche) e "Correggi quantità".
 - 🗺️ **Mappa** dei luoghi dove hai bevuto (solo se acconsenti alla posizione).

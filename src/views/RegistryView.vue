@@ -250,7 +250,7 @@ const chipOff = 'border-rame/30 text-cenere'
 
     <div v-else-if="filtered.length === 0 && cellar && !query && !type" class="mt-10 text-center">
       <p class="text-cenere">Nessuna bottiglia in cantina.</p>
-      <p class="mx-auto mt-1 max-w-xs text-sm text-cenere">Registra una bottiglia indicando 2 o più bottiglie per metterla qui.</p>
+      <p class="mx-auto mt-1 max-w-xs text-sm text-cenere">Registra una bottiglia con almeno 1 bottiglia in cantina per vederla qui.</p>
     </div>
 
     <div v-else-if="filtered.length === 0 && !filtersActive && anyInCellar" class="mt-10 text-center">

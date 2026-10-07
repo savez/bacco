@@ -47,11 +47,11 @@ const form = reactive({
   externalUrl: '',
 })
 
-// Cantina (specs/002-cellar-inventory): in creazione il numero di bottiglie decide. Con 1 la
-// bevo subito (punteggio obbligatorio); con 2 o più va in cantina e punteggio e analisi
-// arrivano al primo stappo.
-const bottleCount = ref('1')
-const toCellar = computed(() => !isEdit && Number(bottleCount.value) >= 2)
+// Cantina (specs/002-cellar-inventory): in creazione le bottiglie in cantina decidono. Con 0
+// la bevo subito (punteggio obbligatorio); con 1 o più vanno in cantina e punteggio e
+// analisi arrivano al primo stappo.
+const bottleCount = ref('0')
+const toCellar = computed(() => !isEdit && Number(bottleCount.value) >= 1)
 // In modifica, un'etichetta mai stappata può ricevere il punteggio ma non lo richiede.
 const existingUntasted = ref(false)
 
@@ -287,8 +287,8 @@ async function onSubmit({ allowDuplicate = false } = {}) {
   saving.value = true
   errors.value = {}
   const count = Number(bottleCount.value)
-  if (!isEdit && (!Number.isInteger(count) || count < 1 || count > 999)) {
-    errors.value = { bottles: 'Indica da 1 a 999 bottiglie.' }
+  if (!isEdit && (!Number.isInteger(count) || count < 0 || count > 999)) {
+    errors.value = { bottles: 'Indica da 0 a 999 bottiglie.' }
     saving.value = false
     await focusFirstError()
     return
@@ -319,7 +319,7 @@ async function onSubmit({ allowDuplicate = false } = {}) {
       }
       await createBottle(payload, { addPhotos })
       if (toCellar.value) {
-        showBanner({ id: 'bottle-saved', message: `In cantina: ${count} bottiglie`, priority: 30 })
+        showBanner({ id: 'bottle-saved', message: count === 1 ? 'In cantina: 1 bottiglia' : `In cantina: ${count} bottiglie`, priority: 30 })
         router.push({ path: '/', query: { cantina: '1' } })
       } else {
         showBanner({ id: 'bottle-saved', message: 'Bottiglia salvata', priority: 30 })
@@ -464,14 +464,14 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
         <p v-if="errors.vintage" class="text-sm text-feccia">{{ errors.vintage }}</p>
         <p v-if="errors.abv" class="text-sm text-feccia">{{ errors.abv }}</p>
         <div v-if="!isEdit">
-          <label for="bottles" class="field-label">Bottiglie</label>
+          <label for="bottles" class="field-label">Bottiglie in cantina</label>
           <input
             id="bottles"
             :ref="setFieldRef('bottles')"
             v-model="bottleCount"
             type="number"
             inputmode="numeric"
-            min="1"
+            min="0"
             max="999"
             step="1"
             aria-describedby="bottles-help"
@@ -479,7 +479,7 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
             :aria-invalid="!!errors.bottles"
           />
           <p id="bottles-help" class="mt-1 text-sm text-cenere">
-            {{ toCellar ? 'Vanno in cantina: punteggio e analisi te li chiedo al primo stappo.' : '1 = la bevo adesso. Con 2 o più vanno in cantina.' }}
+            {{ toCellar ? 'Vanno in cantina: punteggio e analisi te li chiedo alla prima bottiglia stappata.' : '0 = la bevo adesso. Con 1 o più vanno in cantina.' }}
           </p>
           <p v-if="errors.bottles" class="mt-1 text-sm text-feccia">{{ errors.bottles }}</p>
         </div>
