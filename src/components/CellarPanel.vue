@@ -102,13 +102,23 @@ const buttonClass = 'min-h-11 rounded-md border border-rame/30 px-4 py-2 font-bo
       <button type="button" :class="buttonClass" @click="adjustError = ''; adjustOpen = true">Correggi quantità</button>
     </div>
 
-    <h3 class="mt-5 text-sm font-bold uppercase tracking-wide text-cenere">Registro movimenti</h3>
-    <ol class="mt-2 divide-y divide-rame/10 text-sm">
-      <li v-for="m in moves" :key="m.id" class="py-2">
-        <span class="block font-bold">{{ formatMove(m) }}</span>
-        <span class="block text-xs text-cenere">{{ formatDateTime(m.at) }}</span>
-      </li>
-    </ol>
+    <!-- Accordion chiuso di default: con molti movimenti la scheda resterebbe illeggibile. -->
+    <details class="group mt-4 border-t border-rame/20 pt-1">
+      <summary
+        class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-sm font-bold uppercase tracking-wide text-cenere [&::-webkit-details-marker]:hidden"
+      >
+        <span>Registro movimenti ({{ moves.length }})</span>
+        <svg viewBox="0 0 24 24" class="h-5 w-5 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </summary>
+      <ol class="mt-1 divide-y divide-rame/10 text-sm">
+        <li v-for="m in moves" :key="m.id" class="py-2">
+          <span class="block font-bold">{{ formatMove(m) }}</span>
+          <span class="block text-xs text-cenere">{{ formatDateTime(m.at) }}</span>
+        </li>
+      </ol>
+    </details>
 
     <QuantityDialog
       :open="addOpen"
