@@ -14,6 +14,13 @@ jobs:
     name: Lint, test e build
     runs-on: ubuntu-latest
     steps:
+      # Il branch `landing` contiene solo il sito su GitHub Pages: non va mai unito a main.
+      # Questo controllo è obbligatorio, quindi una PR da `landing` non si può unire.
+      - name: Blocca le PR dal branch landing
+        if: github.head_ref == 'landing'
+        run: |
+          echo "::error::Il branch 'landing' non va mai unito a main."
+          exit 1
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:

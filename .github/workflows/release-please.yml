@@ -7,13 +7,23 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  # Per avviare la ricostruzione della landing dopo una release.
+  actions: write
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
       - uses: googleapis/release-please-action@v4
+        id: release
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      # La landing (branch `landing`) mostra la versione di main: dopo una release la ricostruisce.
+      - name: Aggiorna la landing
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run pages.yml --repo ${{ github.repository }} --ref landing

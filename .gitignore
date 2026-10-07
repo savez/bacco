@@ -17,3 +17,8 @@ bacco/
 specs/
 .claude/
 CLAUDE.md
+
+# File generati dalla landing (branch `landing`), che restano sul disco cambiando branch
+landing/node_modules/
+landing/dist/
+landing/.astro/
