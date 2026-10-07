@@ -7,6 +7,7 @@
 [![CI](https://github.com/savez/bacco/actions/workflows/ci.yml/badge.svg)](https://github.com/savez/bacco/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/savez/bacco?label=release)](https://github.com/savez/bacco/releases)
 [![App](https://img.shields.io/website?url=https%3A%2F%2Fbacco-8in8.onrender.com&label=app&up_message=online&down_message=offline)](https://bacco-8in8.onrender.com)
+[![Sito](https://img.shields.io/badge/sito-bacco.smzstudio.it-C9607F)](https://bacco.smzstudio.it/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Vue 3](https://img.shields.io/badge/Vue-3-42b883)](https://vuejs.org/)
 [![PWA](https://img.shields.io/badge/PWA-installabile-5A0FC8)](https://web.dev/progressive-web-apps/)
@@ -14,6 +15,8 @@
 **Bacco** è una PWA per tenere il registro personale dei vini e delle birre che bevi:
 foto, punteggio, analisi organolettica, abbinamento, luogo e ricordi. Funziona offline e
 **i tuoi dati restano sul tuo telefono**: niente account, niente server, niente tracciamento.
+
+🌐 **Sito del progetto**: <https://bacco.smzstudio.it/>
 
 🍷 **App**: <https://bacco-8in8.onrender.com>
 
@@ -34,11 +37,19 @@ foto, punteggio, analisi organolettica, abbinamento, luogo e ricordi. Funziona o
   (DOCG, DOC, IGT, IGP), annata, gradazione, analisi organolettica, abbinamento, note.
 - ⭐ **Punteggio da 1 a 5** con le bottiglie al posto delle stelle e una descrizione per ogni livello.
 - 🗂️ **Registro** con ricerca e filtri per tipo, anno e mese.
+- 🍷 **Cantina personale**: registra una bottiglia con 2 o più bottiglie e va in cantina;
+  punteggio e analisi te li chiede al primo stappo. Filtro "In cantina", registro movimenti
+  (entrate, uscite, rettifiche) e "Correggi quantità".
 - 🗺️ **Mappa** dei luoghi dove hai bevuto (solo se acconsenti alla posizione).
 - 📤 **Card da condividere** sui social, in stile "ho bevuto".
 - 💾 **Backup** in JSON (con le foto) e export CSV per i fogli di calcolo, con promemoria ogni 30 giorni.
 - 📱 **Installabile** sulla schermata Home e utilizzabile offline.
 - 🌗 **Tema chiaro e scuro**, accessibile (WCAG AA), pensato prima di tutto per il telefono.
+
+<p align="center">
+  <img src="docs/screenshots/cantina-dark.png" alt="Filtro In cantina con bottiglie da assaggiare" width="32%" />
+  <img src="docs/screenshots/movimenti-dark.png" alt="Scheda con la cantina e il registro movimenti" width="32%" />
+</p>
 
 ## Privacy
 

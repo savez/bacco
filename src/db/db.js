@@ -35,6 +35,39 @@ db.version(2)
       }),
   )
 
+// v3 (cantina, specs/002-cellar-inventory): ogni bottiglia diventa un'etichetta con le
+// bottiglie in casa (`cellarCount`), la data del primo assaggio (`tastedAt`, null = da
+// assaggiare) e un registro movimenti nella nuova tabella `cellarMoves`. Le voci esistenti
+// sono tutte assaggiate: primo assaggio = data di consumo, 0 bottiglie in cantina.
+db.version(3)
+  .stores({
+    bottles: 'id, consumedAt, tastedAt, updatedAt, type, barcode',
+    photos: 'id, bottleId, [bottleId+order]',
+    settings: 'key',
+    cellarMoves: 'id, bottleId, [bottleId+at]',
+  })
+  .upgrade(async (tx) => {
+    const firstMoves = []
+    await tx
+      .table('bottles')
+      .toCollection()
+      .modify((bottle) => {
+        bottle.cellarCount = 0
+        bottle.cellarUpdatedAt = null
+        bottle.tastedAt = bottle.consumedAt ?? null
+        firstMoves.push({
+          id: crypto.randomUUID(),
+          bottleId: bottle.id,
+          type: 'first',
+          qty: null,
+          from: null,
+          to: null,
+          at: bottle.consumedAt ?? bottle.createdAt ?? new Date().toISOString(),
+        })
+      })
+    await tx.table('cellarMoves').bulkAdd(firstMoves)
+  })
+
 /**
  * Richiede l'archiviazione persistente al browser (best-effort): riduce il rischio che il
  * browser cancelli i dati per liberare spazio. Non blocca l'app se non disponibile o rifiutata.

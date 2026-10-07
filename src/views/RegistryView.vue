@@ -1,11 +1,11 @@
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import BottleRow from '../components/BottleRow.vue'
 import ShareCardDialog from '../components/ShareCardDialog.vue'
 import { liveBottles } from '../db/bottles.js'
 import { useLiveQuery } from '../composables/useLiveQuery.js'
-import { filterBottles, groupByMonth, availableYears, availableMonths } from '../lib/search.js'
+import { filterBottles, groupByMonth, availableYears, availableMonths, cellarSummary, tastedDate } from '../lib/search.js'
 import { db } from '../db/db.js'
 import { photoUrl, revokePhotoUrl } from '../db/photos.js'
 
@@ -15,8 +15,23 @@ const bottles = useLiveQuery(() => liveBottles(), [])
 const sharing = ref(null)
 
 // --- Filtri ---------------------------------------------------------------------------
+const route = useRoute()
+const router = useRouter()
 const query = ref('')
 const type = ref(null)
+// Filtro "In cantina" (specs/002-cellar-inventory): ci si arriva anche dal modulo, dopo aver
+// messo bottiglie in cantina (`/?cantina=1`). Il parametro si legge una volta e si toglie
+// dall'indirizzo, altrimenti riaccenderebbe il filtro a ogni ritorno da una scheda.
+const cellar = ref(false)
+watch(
+  () => route.query.cantina,
+  (value) => {
+    if (value !== '1') return
+    cellar.value = true
+    router.replace({ path: route.path, query: {} })
+  },
+  { immediate: true },
+)
 const year = ref(null)
 const month = ref(null)
 
@@ -32,17 +47,27 @@ watch(year, () => {
   if (month.value && !months.value.includes(month.value)) month.value = null
 })
 
-const filtersActive = computed(() => !!(query.value || type.value || year.value || month.value))
+const filtersActive = computed(() => !!(query.value || type.value || year.value || month.value || cellar.value))
 const filtered = computed(() =>
-  filterBottles(bottles.value, { query: query.value, type: type.value, year: year.value, month: month.value }),
+  filterBottles(bottles.value, {
+    query: query.value,
+    type: type.value,
+    year: year.value,
+    month: month.value,
+    cellar: cellar.value,
+  }),
 )
 const groups = computed(() => groupByMonth(filtered.value))
+// Etichette assaggiate (il diario); quelle da assaggiare si vedono solo con "In cantina".
+const tasted = computed(() => bottles.value.filter((b) => tastedDate(b) !== null))
+const anyInCellar = computed(() => bottles.value.some((b) => (b.cellarCount ?? 0) > 0 || tastedDate(b) === null))
 
 function resetFilters() {
   query.value = ''
   type.value = null
   year.value = null
   month.value = null
+  cellar.value = false
 }
 
 // --- Riepilogo ------------------------------------------------------------------------
@@ -51,7 +76,11 @@ function plural(n, one, many) {
 }
 
 const summary = computed(() => {
-  const all = bottles.value
+  if (cellar.value) {
+    const { labels, bottles: total } = cellarSummary(filtered.value)
+    return `${plural(labels, 'etichetta', 'etichette')} · ${plural(total, 'bottiglia', 'bottiglie')}`
+  }
+  const all = tasted.value
   if (filtersActive.value) return `${filtered.value.length} di ${plural(all.length, 'bottiglia', 'bottiglie')}`
   const wines = all.filter((b) => b.type === 'wine').length
   return [
@@ -143,7 +172,7 @@ const chipOff = 'border-rame/30 text-cenere'
       <!-- Tutti i filtri in una riga sola, scorrevole: lascia lo schermo all'elenco. -->
       <div class="-mx-4 mt-3 flex items-center gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
         <!-- Interruttori: tocca Vino per filtrare, ritoccalo per tornare a tutte le bottiglie. -->
-        <div role="group" aria-label="Filtra per tipo" class="flex shrink-0 gap-2">
+        <div role="group" aria-label="Filtra per tipo e cantina" class="flex shrink-0 gap-2">
           <button
             type="button"
             :aria-pressed="type === 'wine'"
@@ -160,11 +189,19 @@ const chipOff = 'border-rame/30 text-cenere'
           >
             Birra
           </button>
+          <button
+            type="button"
+            :aria-pressed="cellar"
+            :class="[chipBase, cellar ? 'border-rame bg-rame text-doga' : chipOff]"
+            @click="cellar = !cellar"
+          >
+            In cantina
+          </button>
         </div>
-        <span class="h-6 w-px shrink-0 bg-rame/30" aria-hidden="true"></span>
+        <span v-if="!cellar" class="h-6 w-px shrink-0 bg-rame/30" aria-hidden="true"></span>
         <!-- Menu nativi senza aspetto di sistema (Safari ignorerebbe forma e altezza): stessi
              chip di Vino/Birra, con una freccia nostra. Il menu che si apre resta quello del sistema. -->
-        <label v-for="f in periodFilters" :key="f.key" class="relative shrink-0">
+        <label v-for="f in periodFilters" v-show="!cellar" :key="f.key" class="relative shrink-0">
           <span class="sr-only">{{ f.label }}</span>
           <select
             :value="f.model.value"
@@ -211,10 +248,27 @@ const chipOff = 'border-rame/30 text-cenere'
       </RouterLink>
     </div>
 
+    <div v-else-if="filtered.length === 0 && cellar && !query && !type" class="mt-10 text-center">
+      <p class="text-cenere">Nessuna bottiglia in cantina.</p>
+      <p class="mx-auto mt-1 max-w-xs text-sm text-cenere">Registra una bottiglia indicando 2 o più bottiglie per metterla qui.</p>
+    </div>
+
+    <div v-else-if="filtered.length === 0 && !filtersActive && anyInCellar" class="mt-10 text-center">
+      <p class="text-cenere">Non hai ancora assaggiato le bottiglie in cantina.</p>
+      <button type="button" class="mt-2 min-h-11 font-bold text-rame" @click="cellar = true">Vedi la cantina</button>
+    </div>
+
     <div v-else-if="filtered.length === 0" class="mt-10 text-center">
       <p class="text-cenere">Nessuna bottiglia con questi filtri.</p>
       <button type="button" class="mt-2 min-h-11 font-bold text-rame" @click="resetFilters">Azzera filtri</button>
     </div>
+
+    <!-- Cantina: un elenco unico dall'ultima entrata, senza mesi. -->
+    <ul v-else-if="cellar" class="divide-y divide-rame/10">
+      <li v-for="bottle in filtered" :key="bottle.id">
+        <BottleRow :bottle="bottle" :cover-url="coverUrls.get(bottle.id) ?? null" @share="sharing = $event" />
+      </li>
+    </ul>
 
     <template v-else>
       <section v-for="group in groups" :key="group.key">

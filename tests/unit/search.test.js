@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeText, filterBottles, groupByMonth, availableYears, availableMonths } from '../../src/lib/search.js'
+import { normalizeText, filterBottles, groupByMonth, availableYears, availableMonths, cellarSummary } from '../../src/lib/search.js'
 
 describe('normalizeText', () => {
   it('rimuove accenti e porta in minuscolo', () => {
@@ -88,5 +88,61 @@ describe('filtri per periodo', () => {
     expect(availableYears(list)).toEqual([2026, 2025])
     expect(availableMonths(list)).toEqual([3, 10])
     expect(availableMonths(list, 2025)).toEqual([10])
+  })
+})
+
+describe('Home: etichette assaggiate per data del primo assaggio', () => {
+  const at = (y, m, d) => new Date(y, m - 1, d, 20, 0).toISOString()
+  const list = [
+    // Registrata in agosto (in cantina), assaggiata a ottobre.
+    bottle({ name: 'Barolo', consumedAt: at(2026, 8, 1), tastedAt: at(2026, 10, 5) }),
+    bottle({ name: 'Da assaggiare', consumedAt: at(2026, 9, 1), tastedAt: null, rating: null, cellarCount: 6 }),
+    bottle({ name: 'Tipopils', consumedAt: at(2026, 9, 20), tastedAt: at(2026, 9, 20) }),
+  ]
+
+  it('esclude le etichette da assaggiare e ordina per primo assaggio, dal più recente', () => {
+    expect(filterBottles(list, {}).map((b) => b.name)).toEqual(['Barolo', 'Tipopils'])
+  })
+
+  it('raggruppa per mese del primo assaggio', () => {
+    const groups = groupByMonth(filterBottles(list, {}))
+    expect(groups.map((g) => [g.key, g.items.length])).toEqual([['2026-10', 1], ['2026-09', 1]])
+  })
+
+  it('anno e mese filtrano sul primo assaggio, e le etichette da assaggiare non creano voci', () => {
+    expect(filterBottles(list, { month: 8 })).toHaveLength(0)
+    expect(filterBottles(list, { month: 10 }).map((b) => b.name)).toEqual(['Barolo'])
+    expect(availableMonths(list)).toEqual([9, 10])
+    expect(availableYears(list)).toEqual([2026])
+  })
+})
+
+describe('filtro "In cantina"', () => {
+  const list = [
+    bottle({ name: 'Barolo', type: 'wine', cellarCount: 6, tastedAt: null, rating: null, cellarUpdatedAt: '2026-10-01T10:00:00.000Z' }),
+    bottle({ name: 'Tipopils', type: 'beer', cellarCount: 2, cellarUpdatedAt: '2026-10-05T10:00:00.000Z' }),
+    bottle({ name: 'Chianti', type: 'wine', cellarCount: 1, cellarUpdatedAt: '2026-09-01T10:00:00.000Z' }),
+    bottle({ name: 'Finito', type: 'wine', cellarCount: 0, cellarUpdatedAt: '2026-10-06T10:00:00.000Z' }),
+  ]
+
+  it('mostra le etichette con bottiglie in casa, anche da assaggiare, dall\'ultima entrata', () => {
+    expect(filterBottles(list, { cellar: true }).map((b) => b.name)).toEqual(['Tipopils', 'Barolo', 'Chianti'])
+  })
+
+  it('si combina con tipo e ricerca', () => {
+    expect(filterBottles(list, { cellar: true, type: 'wine' }).map((b) => b.name)).toEqual(['Barolo', 'Chianti'])
+    expect(filterBottles(list, { cellar: true, query: 'tipo' }).map((b) => b.name)).toEqual(['Tipopils'])
+  })
+
+  it('riepilogo: etichette e bottiglie', () => {
+    expect(cellarSummary(filterBottles(list, { cellar: true }))).toEqual({ labels: 3, bottles: 9 })
+  })
+})
+
+describe('etichette da assaggiare rimaste a 0 bottiglie', () => {
+  it('restano raggiungibili dal filtro "In cantina"', () => {
+    const list = [bottle({ name: 'Mai assaggiato', tastedAt: null, rating: null, cellarCount: 0, cellarUpdatedAt: '2026-10-01T10:00:00.000Z' })]
+    expect(filterBottles(list, {})).toHaveLength(0)
+    expect(filterBottles(list, { cellar: true }).map((b) => b.name)).toEqual(['Mai assaggiato'])
   })
 })

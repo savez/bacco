@@ -15,7 +15,8 @@ let map
 
 async function loadBottles() {
   const all = await db.bottles.toArray()
-  bottlesWithLocation.value = all.filter((b) => b.location)
+  // Mappa delle bevute: le etichette ancora da assaggiare (in cantina) non ci sono.
+  bottlesWithLocation.value = all.filter((b) => b.location && b.tastedAt !== null)
 }
 
 async function renderMap() {

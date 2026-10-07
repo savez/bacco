@@ -9,7 +9,9 @@ import BarcodeField from '../components/BarcodeField.vue'
 import LookupStatus from '../components/LookupStatus.vue'
 import PermissionHelp from '../components/PermissionHelp.vue'
 import { explainLocationError } from '../lib/permissions.js'
-import { createBottle, updateBottle, getBottle, getSuggestions, findLatestByBarcode } from '../db/bottles.js'
+import { createBottle, updateBottle, getBottle, getSuggestions, findLatestByBarcode, findSameLabel } from '../db/bottles.js'
+import { addToCellar } from '../db/cellar.js'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 import { listPhotos, photoUrl } from '../db/photos.js'
 import { lookupBarcode } from '../lib/openFoodFacts.js'
 import { getCurrentLocation } from '../lib/geo.js'
@@ -45,8 +47,24 @@ const form = reactive({
   externalUrl: '',
 })
 
+// Cantina (specs/002-cellar-inventory): in creazione il numero di bottiglie decide. Con 1 la
+// bevo subito (punteggio obbligatorio); con 2 o più va in cantina e punteggio e analisi
+// arrivano al primo stappo.
+const bottleCount = ref('1')
+const toCellar = computed(() => !isEdit && Number(bottleCount.value) >= 2)
+// In modifica, un'etichetta mai stappata può ricevere il punteggio ma non lo richiede.
+const existingUntasted = ref(false)
+
 const errors = ref({})
 const saving = ref(false)
+// Etichetta già registrata (FR-110): proposta di aggiungere bottiglie invece del doppione.
+const duplicate = ref(null)
+const duplicateMessage = computed(() => {
+  if (!duplicate.value) return ''
+  const { match, count } = duplicate.value
+  const label = [match.name, match.vintage].filter(Boolean).join(' ')
+  return `Hai già «${label}». Aggiungo ${count} bottiglie a quella invece di crearne una nuova?`
+})
 const loading = ref(isEdit)
 const notFound = ref(false)
 const suggestions = ref({ names: [], producers: [] })
@@ -239,6 +257,7 @@ onMounted(async () => {
   form.abv = existing.abv != null ? String(existing.abv).replace('.', ',') : ''
   // Record precedenti alla migrazione v2 restano leggibili anche se non ancora riscritti.
   form.tasting = existing.tasting || ''
+  existingUntasted.value = existing.tastedAt === null
   Object.assign(form, { consumedDate: toDateAndTime(existing.consumedAt).date, consumedTime: toDateAndTime(existing.consumedAt).time })
   if (existing.location) {
     location.value = existing.location
@@ -260,18 +279,26 @@ function setNow() {
 
 async function focusFirstError() {
   await nextTick()
-  const firstKey = ['name', 'type', 'rating'].find((k) => errors.value[k])
+  const firstKey = ['bottles', 'name', 'type', 'rating'].find((k) => errors.value[k])
   fieldRefs.value[firstKey]?.focus?.()
 }
 
-async function onSubmit() {
+async function onSubmit({ allowDuplicate = false } = {}) {
   saving.value = true
   errors.value = {}
+  const count = Number(bottleCount.value)
+  if (!isEdit && (!Number.isInteger(count) || count < 1 || count > 999)) {
+    errors.value = { bottles: 'Indica da 1 a 999 bottiglie.' }
+    saving.value = false
+    await focusFirstError()
+    return
+  }
   const payload = {
     ...form,
     vintage: form.vintage === '' ? null : Number(form.vintage),
     consumedAt: fromDateAndTime(form.consumedDate, form.consumedTime),
     location: location.value,
+    ...(toCellar.value ? { tastedAt: null, rating: null, tasting: '', pairing: '', cellarCount: count } : {}),
   }
   const addPhotos = photos.value.filter((p) => p.isNew).map((p) => ({ blob: p.blob, thumb: p.thumb }))
   const currentIds = new Set(photos.value.filter((p) => !p.isNew).map((p) => p.id))
@@ -283,9 +310,21 @@ async function onSubmit() {
       showBanner({ id: 'bottle-saved', message: 'Modifiche salvate', priority: 30 })
       closeSheet(router, `/bottiglia/${route.params.id}`)
     } else {
+      if (toCellar.value && !allowDuplicate) {
+        const match = await findSameLabel(payload)
+        if (match) {
+          duplicate.value = { match, count }
+          return
+        }
+      }
       await createBottle(payload, { addPhotos })
-      showBanner({ id: 'bottle-saved', message: 'Bottiglia salvata', priority: 30 })
-      router.push('/')
+      if (toCellar.value) {
+        showBanner({ id: 'bottle-saved', message: `In cantina: ${count} bottiglie`, priority: 30 })
+        router.push({ path: '/', query: { cantina: '1' } })
+      } else {
+        showBanner({ id: 'bottle-saved', message: 'Bottiglia salvata', priority: 30 })
+        router.push('/')
+      }
     }
   } catch (err) {
     if (err?.name === 'ValidationError') {
@@ -305,6 +344,23 @@ async function onSubmit() {
   } finally {
     saving.value = false
   }
+}
+
+async function onAddToExisting() {
+  const { match, count } = duplicate.value
+  duplicate.value = null
+  try {
+    await addToCellar(match.id, count)
+    showBanner({ id: 'bottle-saved', message: `Aggiunte ${count} bottiglie a ${match.name}`, priority: 30 })
+    router.replace(`/bottiglia/${match.id}`)
+  } catch (err) {
+    showBanner({ id: 'bottle-save-error', message: err.message, tone: 'error', priority: 100 })
+  }
+}
+
+function onCreateAnyway() {
+  duplicate.value = null
+  onSubmit({ allowDuplicate: true })
 }
 
 function sourceLabel(key) {
@@ -407,6 +463,26 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
         </div>
         <p v-if="errors.vintage" class="text-sm text-feccia">{{ errors.vintage }}</p>
         <p v-if="errors.abv" class="text-sm text-feccia">{{ errors.abv }}</p>
+        <div v-if="!isEdit">
+          <label for="bottles" class="field-label">Bottiglie</label>
+          <input
+            id="bottles"
+            :ref="setFieldRef('bottles')"
+            v-model="bottleCount"
+            type="number"
+            inputmode="numeric"
+            min="1"
+            max="999"
+            step="1"
+            aria-describedby="bottles-help"
+            :class="[inputClass, 'max-w-32']"
+            :aria-invalid="!!errors.bottles"
+          />
+          <p id="bottles-help" class="mt-1 text-sm text-cenere">
+            {{ toCellar ? 'Vanno in cantina: punteggio e analisi te li chiedo al primo stappo.' : '1 = la bevo adesso. Con 2 o più vanno in cantina.' }}
+          </p>
+          <p v-if="errors.bottles" class="mt-1 text-sm text-feccia">{{ errors.bottles }}</p>
+        </div>
 
         <div>
           <p class="field-label">Tipo *</p>
@@ -481,16 +557,16 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
         </div>
       </fieldset>
 
-      <fieldset>
-        <legend class="section-title">Punteggio *</legend>
+      <fieldset v-if="!toCellar">
+        <legend class="section-title">{{ existingUntasted ? 'Punteggio' : 'Punteggio *' }}</legend>
         <div :ref="setFieldRef('rating')" tabindex="-1">
           <BottleRating v-model="form.rating" :type="form.type" :invalid="!!errors.rating" />
         </div>
       </fieldset>
 
       <fieldset class="space-y-4">
-        <legend class="section-title">Degustazione</legend>
-        <div>
+        <legend class="section-title">{{ toCellar ? 'Note' : 'Degustazione' }}</legend>
+        <div v-if="!toCellar">
           <label for="tasting" class="field-label">Analisi organolettica personale</label>
           <textarea
             id="tasting"
@@ -503,12 +579,12 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
           ></textarea>
           <p v-if="errors.tasting" class="mt-1 text-sm text-feccia">{{ errors.tasting }}</p>
         </div>
-        <div>
+        <div v-if="!toCellar">
           <label for="pairing" class="field-label">Con cosa l'ho mangiato</label>
           <input id="pairing" v-model="form.pairing" type="text" maxlength="500" placeholder="Es. brasato, pizza margherita" :class="inputClass" />
         </div>
         <div>
-          <label for="notes" class="field-label">Note</label>
+          <label for="notes" :class="toCellar ? 'sr-only' : 'field-label'">Note</label>
           <textarea
             id="notes"
             v-model="form.notes"
@@ -591,6 +667,18 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
         Salva bottiglia
       </button>
     </div>
+
+    <ConfirmDialog
+      :open="!!duplicate"
+      title="Ce l'hai già"
+      :message="duplicateMessage"
+      confirm-label="Aggiungi"
+      cancel-label="Crea nuova"
+      escape-dismisses
+      @confirm="onAddToExisting"
+      @cancel="onCreateAnyway"
+      @dismiss="duplicate = null"
+    />
 
     <BarcodeScanner v-if="scannerOpen" @detected="onBarcodeDetected" @close="scannerOpen = false" />
   </div>

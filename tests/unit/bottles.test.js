@@ -6,6 +6,7 @@ import {
   deleteBottle,
   getBottle,
   findLatestByBarcode,
+  findSameLabel,
 } from '../../src/db/bottles.js'
 
 const sample = () => ({ name: 'Tipopils', type: 'beer', rating: 5 })
@@ -17,6 +18,7 @@ beforeEach(async () => {
 afterEach(async () => {
   await db.bottles.clear()
   await db.photos.clear()
+  await db.cellarMoves.clear()
   await db.settings.clear()
   db.close()
 })
@@ -156,5 +158,72 @@ describe('findLatestByBarcode', () => {
     const found = await findLatestByBarcode('12345678')
     expect(found.id).toBe(newer.id)
     expect(await findLatestByBarcode('99999999')).toBeUndefined()
+  })
+})
+
+describe('cantina nel ciclo di vita dell\'etichetta', () => {
+  const movesOf = (id) => db.cellarMoves.where('bottleId').equals(id).toArray()
+
+  it('bevuta subito: solo il movimento di prima registrazione, alla data di "quando"', async () => {
+    const bottle = await createBottle({ ...sample(), consumedAt: '2026-10-01T20:00:00.000Z' })
+    const moves = await movesOf(bottle.id)
+    expect(moves).toHaveLength(1)
+    expect(moves[0]).toMatchObject({ type: 'first', at: '2026-10-01T20:00:00.000Z' })
+    expect(bottle).toMatchObject({ cellarCount: 0, tastedAt: '2026-10-01T20:00:00.000Z' })
+  })
+
+  it('in cantina: senza punteggio, prima registrazione ed entrata', async () => {
+    const at = '2026-10-01T17:00:00.000Z'
+    const bottle = await createBottle({ name: 'Barolo', type: 'wine', tastedAt: null, cellarCount: 6, consumedAt: at })
+    expect(bottle).toMatchObject({ rating: null, tastedAt: null, cellarCount: 6, cellarUpdatedAt: at })
+    const moves = await movesOf(bottle.id)
+    expect(moves.map((m) => [m.type, m.qty])).toEqual(expect.arrayContaining([['first', null], ['in', 6]]))
+  })
+
+  it('la modifica dal modulo non cambia la cantina; un punteggio rende l\'etichetta assaggiata', async () => {
+    const bottle = await createBottle({ name: 'Barolo', type: 'wine', tastedAt: null, cellarCount: 6 })
+    const updated = await updateBottle(bottle.id, { name: 'Barolo Cannubi', type: 'wine', rating: 4, cellarCount: 0 })
+    expect(updated.cellarCount).toBe(6)
+    expect(updated.rating).toBe(4)
+    expect(updated.tastedAt).toBeTruthy()
+  })
+
+  it('eliminare l\'etichetta elimina anche i suoi movimenti', async () => {
+    const bottle = await createBottle({ name: 'Barolo', type: 'wine', tastedAt: null, cellarCount: 2 })
+    await deleteBottle(bottle.id)
+    expect(await movesOf(bottle.id)).toHaveLength(0)
+  })
+})
+
+describe('findSameLabel', () => {
+  it('riconosce l\'etichetta dal codice a barre', async () => {
+    const barolo = await createBottle({ name: 'Barolo', type: 'wine', rating: 4, barcode: '8000000000001' })
+    expect((await findSameLabel({ barcode: '8000000000001', name: 'Altro nome' }))?.id).toBe(barolo.id)
+  })
+
+  it('senza codice, da nome, produttore e annata (senza badare ad accenti e maiuscole)', async () => {
+    const barolo = await createBottle({ name: 'Barolo Cannubì', producer: 'Borgogno', vintage: 2017, type: 'wine', rating: 4 })
+    expect((await findSameLabel({ name: 'barolo cannubi', producer: 'BORGOGNO', vintage: 2017 }))?.id).toBe(barolo.id)
+  })
+
+  it('annata o produttore diversi sono un\'altra etichetta', async () => {
+    await createBottle({ name: 'Barolo', producer: 'Borgogno', vintage: 2017, type: 'wine', rating: 4 })
+    expect(await findSameLabel({ name: 'Barolo', producer: 'Borgogno', vintage: 2018 })).toBeUndefined()
+    expect(await findSameLabel({ name: 'Barolo', producer: 'Altro', vintage: 2017 })).toBeUndefined()
+  })
+})
+
+describe('modifica della data di una bevuta subito', () => {
+  it('il primo assaggio segue la nuova data', async () => {
+    const bottle = await createBottle({ ...sample(), consumedAt: '2026-10-01T20:00:00.000Z' })
+    const updated = await updateBottle(bottle.id, { ...sample(), consumedAt: '2026-09-20T20:00:00.000Z' })
+    expect(updated.tastedAt).toBe('2026-09-20T20:00:00.000Z')
+  })
+
+  it('per un\'etichetta stappata dopo la registrazione il primo assaggio resta quello', async () => {
+    const bottle = await createBottle({ name: 'Barolo', type: 'wine', tastedAt: null, cellarCount: 2, consumedAt: '2026-08-01T20:00:00.000Z' })
+    await db.bottles.update(bottle.id, { rating: 4, tastedAt: '2026-10-05T20:00:00.000Z' })
+    const updated = await updateBottle(bottle.id, { name: 'Barolo', type: 'wine', rating: 4, consumedAt: '2026-07-01T20:00:00.000Z' })
+    expect(updated.tastedAt).toBe('2026-10-05T20:00:00.000Z')
   })
 })

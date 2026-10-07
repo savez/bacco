@@ -1,6 +1,16 @@
 import { liveQuery } from 'dexie'
 import { db } from './db.js'
 import { validateBottle } from '../lib/validate.js'
+import { normalizeText } from '../lib/search.js'
+
+/**
+ * Nuovo movimento di cantina (data-model.md); i campi non usati dal tipo restano null.
+ * @param {string} bottleId
+ * @param {'first'|'in'|'out'|'adjust'} type
+ */
+export function move(bottleId, type, { qty = null, from = null, to = null, at = new Date().toISOString() } = {}) {
+  return { id: crypto.randomUUID(), bottleId, type, qty, from, to, at }
+}
 
 export class ValidationError extends Error {
   /** @param {Record<string,string>} errors */
@@ -20,9 +30,15 @@ export async function createBottle(input, { addPhotos = [] } = {}) {
   if (!result.ok) throw new ValidationError(result.errors)
   const now = new Date().toISOString()
   const bottle = { ...result.value, id: crypto.randomUUID(), createdAt: now, updatedAt: now }
+  // "Quando" della registrazione: anche i movimenti iniziali della cantina partono da lì.
+  const registeredAt = bottle.consumedAt
+  if (bottle.cellarCount > 0) bottle.cellarUpdatedAt = registeredAt
+  const moves = [move(bottle.id, 'first', { at: registeredAt })]
+  if (bottle.cellarCount > 0) moves.push(move(bottle.id, 'in', { qty: bottle.cellarCount, at: registeredAt }))
 
-  await db.transaction('rw', db.bottles, db.photos, async () => {
+  await db.transaction('rw', db.bottles, db.photos, db.cellarMoves, async () => {
     await db.bottles.put(bottle)
+    await db.cellarMoves.bulkAdd(moves)
     await Promise.all(
       addPhotos.map((photo, order) =>
         db.photos.put({
@@ -45,13 +61,25 @@ export async function createBottle(input, { addPhotos = [] } = {}) {
  * @param {{addPhotos?: {blob: Blob, thumb: Blob}[], removePhotoIds?: string[]}} [opts]
  */
 export async function updateBottle(id, input, { addPhotos = [], removePhotoIds = [] } = {}) {
-  const result = validateBottle(input)
+  const existing = await db.bottles.get(id)
+  if (!existing) throw new Error('Bottiglia non trovata.')
+  const now = new Date().toISOString()
+  // La modifica non tocca la cantina (si gestisce dalla scheda). Un'etichetta da assaggiare
+  // a cui si dà un punteggio dal modulo diventa assaggiata adesso.
+  // Per una bevuta subito il primo assaggio È "quando": se l'utente cambia data, la segue.
+  const followsWhen = existing.tastedAt != null && existing.tastedAt === existing.consumedAt
+  const tastedAt = followsWhen
+    ? (input.consumedAt ?? existing.consumedAt)
+    : (existing.tastedAt ?? (input.rating ? now : null))
+  const result = validateBottle({
+    ...input,
+    tastedAt,
+    cellarCount: existing.cellarCount ?? 0,
+    cellarUpdatedAt: existing.cellarUpdatedAt ?? null,
+  })
   if (!result.ok) throw new ValidationError(result.errors)
 
   return db.transaction('rw', db.bottles, db.photos, async () => {
-    const existing = await db.bottles.get(id)
-    if (!existing) throw new Error('Bottiglia non trovata.')
-    const now = new Date().toISOString()
     const updated = { ...existing, ...result.value, id, updatedAt: now }
     await db.bottles.put(updated)
 
@@ -87,8 +115,9 @@ export async function updateBottle(id, input, { addPhotos = [], removePhotoIds =
 
 /** @param {string} id */
 export async function deleteBottle(id) {
-  await db.transaction('rw', db.bottles, db.photos, async () => {
+  await db.transaction('rw', db.bottles, db.photos, db.cellarMoves, async () => {
     await db.photos.where('bottleId').equals(id).delete()
+    await db.cellarMoves.where('bottleId').equals(id).delete()
     await db.bottles.delete(id)
   })
 }
@@ -96,6 +125,15 @@ export async function deleteBottle(id) {
 /** @param {string} id */
 export async function getBottle(id) {
   return db.bottles.get(id)
+}
+
+/**
+ * Observable Dexie di una sola etichetta: la scheda si aggiorna da sola dopo le
+ * operazioni di cantina (stappa, aggiungi, annulla).
+ * @param {string} id
+ */
+export function liveBottle(id) {
+  return liveQuery(() => db.bottles.get(id))
 }
 
 /** Observable Dexie: lista completa ordinata dalla più recente. */
@@ -131,4 +169,21 @@ export async function findLatestByBarcode(code) {
   const matches = await db.bottles.where('barcode').equals(code).toArray()
   matches.sort((a, b) => b.consumedAt.localeCompare(a.consumedAt))
   return matches[0]
+}
+
+/**
+ * Etichetta già registrata (FR-110): stesso codice a barre o, in mancanza, stesso nome,
+ * produttore e annata (senza badare ad accenti e maiuscole). Serve a evitare doppioni.
+ * @param {{barcode?: string|null, name?: string, producer?: string|null, vintage?: number|null}} label
+ */
+export async function findSameLabel({ barcode, name, producer, vintage }) {
+  if (barcode) {
+    const byBarcode = await findLatestByBarcode(barcode)
+    if (byBarcode) return byBarcode
+  }
+  if (!name) return undefined
+  const key = (n, p, v) => `${normalizeText(n ?? '').trim()}|${normalizeText(p ?? '').trim()}|${v ?? ''}`
+  const wanted = key(name, producer, vintage)
+  const all = await db.bottles.toArray()
+  return all.find((b) => key(b.name, b.producer, b.vintage) === wanted)
 }

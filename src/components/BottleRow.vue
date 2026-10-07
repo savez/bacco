@@ -20,6 +20,9 @@ const SILHOUETTE = {
 }
 
 const isWine = computed(() => props.bottle.type === 'wine')
+// Cantina: bottiglie in casa ed etichette mai stappate (senza punteggio).
+const inCellar = computed(() => props.bottle.cellarCount ?? 0)
+const untasted = computed(() => props.bottle.tastedAt === null)
 
 const subtitle = computed(() =>
   [kindLabel(props.bottle, ' '), props.bottle.producer, props.bottle.vintage].filter(Boolean).join(' · '),
@@ -43,9 +46,17 @@ const subtitle = computed(() =>
         <span class="block truncate font-bold">{{ bottle.name }}</span>
         <span class="block truncate text-sm text-cenere">{{ subtitle }}</span>
       </span>
-      <BottleRatingMark :value="bottle.rating" :type="bottle.type" />
+      <span class="flex shrink-0 flex-col items-end gap-1">
+        <span v-if="untasted" class="rounded-full border border-luppolo px-2 py-0.5 text-xs font-bold text-luppolo">Da assaggiare</span>
+        <BottleRatingMark v-else :value="bottle.rating" :type="bottle.type" />
+        <span v-if="inCellar > 0" class="text-xs font-bold text-rame">
+          <span aria-hidden="true">×{{ inCellar }}</span>
+          <span class="sr-only">{{ inCellar }} in cantina</span>
+        </span>
+      </span>
     </RouterLink>
     <button
+      v-if="!untasted"
       type="button"
       :aria-label="`Condividi ${bottle.name}`"
       class="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-cenere hover:text-gesso"
@@ -55,5 +66,7 @@ const subtitle = computed(() =>
         <path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />
       </svg>
     </button>
+    <!-- Stessa larghezza del pulsante Condividi, così le righe restano allineate. -->
+    <span v-if="untasted" class="-mr-2 w-11 shrink-0" aria-hidden="true"></span>
   </div>
 </template>

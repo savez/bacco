@@ -22,6 +22,9 @@ const HEADER = [
   'latitudine',
   'longitudine',
   'numero_foto',
+  // Cantina (specs/002-cellar-inventory/contracts/csv-format.md).
+  'in_cantina',
+  'primo_assaggio',
 ]
 
 function formatLocalDateTime(iso) {
@@ -66,7 +69,7 @@ export function buildCsv(bottles, photoCounts = {}) {
       bottle.appellation ?? '',
       bottle.vintage ?? '',
       bottle.abv ?? '',
-      bottle.rating,
+      bottle.rating ?? '',
       level?.label ?? '',
       bottle.tasting ?? '',
       bottle.pairing ?? '',
@@ -76,6 +79,8 @@ export function buildCsv(bottles, photoCounts = {}) {
       bottle.location?.lat ?? '',
       bottle.location?.lon ?? '',
       photoCounts[bottle.id] ?? 0,
+      bottle.cellarCount ?? 0,
+      bottle.tastedAt ? formatLocalDateTime(bottle.tastedAt) : '',
     ]
     lines.push(row.map(csvField).join(';'))
   }

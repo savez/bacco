@@ -9,29 +9,59 @@ export function normalizeText(text) {
 }
 
 /**
- * @param {object[]} bottles
- * @param {{query?: string, type?: 'wine'|'beer'}} filters
+ * Data del primo assaggio (specs/002-cellar-inventory): `null` = da assaggiare. I record
+ * senza il campo (precedenti alla cantina) sono assaggiati il giorno della bevuta.
+ * @param {{tastedAt?: string|null, consumedAt: string}} bottle
  */
-export function filterBottles(bottles, { query, type, year, month } = {}) {
+export function tastedDate(bottle) {
+  return bottle.tastedAt === undefined ? bottle.consumedAt : bottle.tastedAt
+}
+
+const byTastedDesc = (a, b) => tastedDate(b).localeCompare(tastedDate(a))
+const byCellarDesc = (a, b) => (b.cellarUpdatedAt ?? '').localeCompare(a.cellarUpdatedAt ?? '')
+
+/**
+ * Elenco della Home. Senza `cellar`: solo etichette assaggiate, dal primo assaggio più
+ * recente. Con `cellar`: quelle con bottiglie in casa e quelle ancora da assaggiare,
+ * dall'ultima entrata in cantina; anno e mese non si applicano.
+ * @param {object[]} bottles
+ * @param {{query?: string, type?: 'wine'|'beer', year?: number|null, month?: number|null, cellar?: boolean}} filters
+ */
+export function filterBottles(bottles, { query, type, year, month, cellar = false } = {}) {
   const needle = query ? normalizeText(query) : ''
-  return bottles.filter((b) => {
-    if (type && b.type !== type) return false
-    if (year || month) {
-      // Anno e mese in ora locale, come li vede l'utente nel registro.
-      const d = new Date(b.consumedAt)
-      if (year && d.getFullYear() !== year) return false
-      if (month && d.getMonth() + 1 !== month) return false
-    }
-    if (!needle) return true
-    return (
-      normalizeText(b.name).includes(needle) || normalizeText(b.producer ?? '').includes(needle)
-    )
-  })
+  if (cellar) {
+    year = null
+    month = null
+  }
+  return bottles
+    .filter((b) => {
+      // Con "In cantina" ci sono anche le etichette da assaggiare rimaste a 0 bottiglie
+      // ("Più tardi" all'ultimo stappo): altrimenti non sarebbero raggiungibili da nessuna parte.
+      if (cellar ? !((b.cellarCount ?? 0) > 0 || tastedDate(b) === null) : tastedDate(b) === null) return false
+      if (type && b.type !== type) return false
+      if (year || month) {
+        // Anno e mese in ora locale, come li vede l'utente nel registro.
+        const d = new Date(tastedDate(b))
+        if (year && d.getFullYear() !== year) return false
+        if (month && d.getMonth() + 1 !== month) return false
+      }
+      if (!needle) return true
+      return (
+        normalizeText(b.name).includes(needle) || normalizeText(b.producer ?? '').includes(needle)
+      )
+    })
+    .sort(cellar ? byCellarDesc : byTastedDesc)
+}
+
+/** Riepilogo della cantina: etichette e bottiglie in casa. @param {object[]} list */
+export function cellarSummary(list) {
+  return { labels: list.length, bottles: list.reduce((sum, b) => sum + (b.cellarCount ?? 0), 0) }
 }
 
 /** Anni presenti nel registro, dal più recente. @param {object[]} bottles */
 export function availableYears(bottles) {
-  const years = new Set(bottles.map((b) => new Date(b.consumedAt).getFullYear()))
+  const tasted = bottles.filter((b) => tastedDate(b) !== null)
+  const years = new Set(tasted.map((b) => new Date(tastedDate(b)).getFullYear()))
   return [...years].sort((a, b) => b - a)
 }
 
@@ -42,24 +72,25 @@ export function availableYears(bottles) {
 export function availableMonths(bottles, year = null) {
   const months = new Set()
   for (const b of bottles) {
-    const d = new Date(b.consumedAt)
+    if (tastedDate(b) === null) continue
+    const d = new Date(tastedDate(b))
     if (!year || d.getFullYear() === year) months.add(d.getMonth() + 1)
   }
   return [...months].sort((a, b) => a - b)
 }
 
 /**
- * Raggruppa per mese (ordine cronologico discendente, coerente con l'ordinamento in ingresso).
+ * Raggruppa per mese del primo assaggio (ordine discendente, coerente con l'ordinamento in ingresso).
  * @param {object[]} bottles
  */
 export function groupByMonth(bottles) {
   const groups = []
   const byKey = new Map()
   for (const bottle of bottles) {
-    const key = monthKey(bottle.consumedAt)
+    const key = monthKey(tastedDate(bottle))
     let group = byKey.get(key)
     if (!group) {
-      group = { key, heading: formatMonthHeading(bottle.consumedAt), items: [] }
+      group = { key, heading: formatMonthHeading(tastedDate(bottle)), items: [] }
       byKey.set(key, group)
       groups.push(group)
     }
