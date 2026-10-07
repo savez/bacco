@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#E6E8E2" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1C1613" media="(prefers-color-scheme: dark)" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180x180.png" />
+    <link rel="icon" href="/icons/pwa-64x64.png" />
+    <!-- Script esterno sincrono: applica il tema prima del primo render senza
+         violare la CSP (nessuno script inline). Vedi research.md R2. -->
+    <script src="/theme-init.js"></script>
+    <title>Bacco</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

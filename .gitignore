@@ -1,0 +1,19 @@
+node_modules/
+dist/
+coverage/
+docker/certs/*.pem
+docker/certs/*.key
+.DS_Store
+*.log
+npm-debug.log*
+*.local
+.vite/
+
+# Cartella annidata vuota rimasta dall'inizializzazione (non usata)
+bacco/
+
+# Specifiche e strumenti spec-kit: restano solo in locale
+.specify/
+specs/
+.claude/
+CLAUDE.md

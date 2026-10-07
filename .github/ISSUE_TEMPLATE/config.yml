@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentazione e setup
+    url: https://github.com/savez/bacco#readme
+    about: Sviluppo locale con Docker, deploy, risoluzione problemi
+  - name: Segnala una vulnerabilità (privato)
+    url: https://github.com/savez/bacco/security/advisories/new
+    about: Non aprire issue pubbliche per problemi di sicurezza

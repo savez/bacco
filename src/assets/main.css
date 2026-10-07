@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+/* Tema a classe (costituzione, principio V): .dark aggiunta su <html> da
+   public/theme-init.js e src/lib/theme.js. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Token di colore (ui-design.md). Default = tema "calce" (chiaro); .dark = "cantina". */
+:root {
+  /* I controlli nativi (selettori di data/ora, scrollbar) seguono il tema. */
+  color-scheme: light;
+  --c-botte: #E6E8E2;
+  --c-doga: #F4F5F1;
+  --c-gesso: #2A1E19;
+  --c-cenere: #5C5049;
+  --c-feccia: #7D2341;
+  --c-luppolo: #7A5510;
+  --c-rame: #8A4F2A;
+}
+
+.dark {
+  color-scheme: dark;
+  --c-botte: #1C1613;
+  --c-doga: #2A211C;
+  --c-gesso: #EDE6D8;
+  --c-cenere: #B5A99A;
+  --c-feccia: #C9607F;
+  --c-luppolo: #E0AC4A;
+  --c-rame: #C08050;
+}
+
+@theme {
+  --color-botte: var(--c-botte);
+  --color-doga: var(--c-doga);
+  --color-gesso: var(--c-gesso);
+  --color-cenere: var(--c-cenere);
+  --color-feccia: var(--c-feccia);
+  --color-luppolo: var(--c-luppolo);
+  --color-rame: var(--c-rame);
+  --font-display: "Big Shoulders Stencil Display", sans-serif;
+  --font-sans: "Atkinson Hyperlegible Next", sans-serif;
+}
+
+body {
+  background-color: var(--c-botte);
+  color: var(--c-gesso);
+  font-family: var(--font-sans);
+}
+
+/* La ricerca ha già il suo pulsante "Cancella": niente seconda ✕ del browser. */
+input[type='search']::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--c-rame);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Il reset di Tailwind azzera il margine dei <dialog>: senza `margin: auto` i modali nativi
+   (Condividi, Elimina) si aprono in alto a sinistra invece che al centro. */
+@layer base {
+  dialog:modal {
+    margin: auto;
+  }
+}

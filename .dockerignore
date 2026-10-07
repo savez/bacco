@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+.git/
+docker/certs/
+specs/
+.specify/
+.claude/
+bacco/
+*.log
+.DS_Store
