@@ -1,6 +1,6 @@
 # Landing di Bacco
 
-Sito di presentazione pubblicato su GitHub Pages (<https://savez.github.io/bacco/>).
+Sito di presentazione pubblicato su GitHub Pages (<https://bacco.smzstudio.it>, dominio personalizzato configurato in Settings → Pages).
 
 > ⚠️ Vive solo sul branch **`landing`**, che **non va mai unito a `main`**: la CI blocca
 > qualsiasi PR da `landing` verso `main`.
@@ -9,7 +9,7 @@ Sito di presentazione pubblicato su GitHub Pages (<https://savez.github.io/bacco
 
 ```bash
 git switch landing
-docker compose up landing     # http://localhost:4321/bacco/
+docker compose up landing     # http://localhost:4321/bacco/ (in locale il percorso resta /bacco/)
 ```
 
 ## Pubblicazione
