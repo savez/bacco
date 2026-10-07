@@ -4,6 +4,14 @@ Tutte le modifiche rilevanti del progetto sono documentate in questo file, gener
 [release-please](https://github.com/googleapis/release-please) a partire dai
 [Conventional Commits](https://www.conventionalcommits.org/it/).
 
+## [1.4.0](https://github.com/savez/bacco/compare/v1.3.0...v1.4.0) (2026-10-07)
+
+
+### ✨ Novità
+
+* nuova interfaccia "Cantina viva" con note organolettiche a chip ([59445d3](https://github.com/savez/bacco/commit/59445d339acc456d6da4a885caf1f53daea9836f))
+* nuova interfaccia "Cantina viva" con note organolettiche a chip ([ec3f40e](https://github.com/savez/bacco/commit/ec3f40e1f8de76d32a481edeadbd0f025700bffc))
+
 ## [1.3.0](https://github.com/savez/bacco/compare/v1.2.0...v1.3.0) (2026-10-07)
 
 
