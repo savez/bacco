@@ -23,6 +23,7 @@ const router = useRouter()
 // Versione da package.json (aggiornata da release-please), utile nelle segnalazioni di bug.
 const APP_VERSION = __APP_VERSION__
 const REPO_URL = 'https://github.com/savez/bacco'
+const SITE_URL = 'https://bacco.smzstudio.it/'
 const { updateCheckStatus, checkForUpdate } = useUpdateCheck()
 const UPDATE_MESSAGES = {
   checking: 'Controllo in corso…',
@@ -296,6 +297,9 @@ async function onSecondConfirm() {
         </a>
         <a :href="REPO_URL" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 items-center font-bold text-rame">
           Codice sorgente
+        </a>
+        <a :href="SITE_URL" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 items-center font-bold text-rame">
+          Sito del progetto
         </a>
       </p>
     </section>
