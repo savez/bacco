@@ -1,0 +1,23 @@
+services:
+  dev:
+    image: node:24-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_POLLING: "true"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+  web:
+    build: .
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./docker/certs:/etc/nginx/certs-local:ro
+
+volumes:
+  node_modules:

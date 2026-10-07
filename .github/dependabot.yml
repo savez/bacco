@@ -1,0 +1,32 @@
+# Aggiornamenti di routine delle dipendenze. Gli alert di sicurezza arrivano comunque:
+# qui si governa solo la manutenzione ordinaria.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    # Commit convenzionali obbligatori (commitlint in CI).
+    commit-message:
+      prefix: chore
+    ignore:
+      # Resta su vue-router 4 per scelta (plan.md): il passaggio a 5 va fatto a mano.
+      - dependency-name: vue-router
+        update-types: [version-update:semver-major]
+    groups:
+      toolchain-dev:
+        dependency-type: development
+      runtime:
+        dependency-type: production
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+    groups:
+      github-actions:
+        patterns:
+          - '*'

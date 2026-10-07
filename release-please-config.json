@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "package-name": "bacco",
+      "include-component-in-tag": false,
+      "include-v-in-tag": true,
+      "draft": false,
+      "prerelease": false,
+      "changelog-sections": [
+        { "type": "feat", "section": "✨ Novità" },
+        { "type": "fix", "section": "🐛 Correzioni" },
+        { "type": "perf", "section": "⚡ Prestazioni" },
+        { "type": "refactor", "section": "♻️ Refactoring" },
+        { "type": "docs", "section": "📝 Documentazione" },
+        { "type": "style", "section": "💄 Stile", "hidden": true },
+        { "type": "test", "section": "🧪 Test", "hidden": true },
+        { "type": "ci", "section": "🤖 CI", "hidden": true },
+        { "type": "build", "section": "🛠 Build", "hidden": true },
+        { "type": "chore", "section": "🧹 Manutenzione", "hidden": true }
+      ]
+    }
+  }
+}

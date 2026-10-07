@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+docker/certs/*.pem
+docker/certs/*.key
+.DS_Store
+*.log
+npm-debug.log*
+*.local
+.vite/
+
+# Cartella annidata vuota rimasta dall'inizializzazione (non usata, vedi plan.md)
+bacco/
