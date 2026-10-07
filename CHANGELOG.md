@@ -4,6 +4,19 @@ Tutte le modifiche rilevanti del progetto sono documentate in questo file, gener
 [release-please](https://github.com/googleapis/release-please) a partire dai
 [Conventional Commits](https://www.conventionalcommits.org/it/).
 
+## [1.3.0](https://github.com/savez/bacco/compare/v1.2.0...v1.3.0) (2026-10-07)
+
+
+### ✨ Novità
+
+* contrassegno di Stato al posto della ricerca da codice a barre ([b87196c](https://github.com/savez/bacco/commit/b87196c5af13480634307eafcb4bde79b1be25ea))
+* contrassegno di Stato; fix salvataggio appeso e mappa ([e025080](https://github.com/savez/bacco/commit/e0250803049bd95ba9219348e58927a9a00f8118))
+
+
+### 🐛 Correzioni
+
+* il salvataggio non resta più appeso e la mappa resta nel suo riquadro ([b414b06](https://github.com/savez/bacco/commit/b414b069c337e66fe833f1aa58a41397e992cddb))
+
 ## [1.2.0](https://github.com/savez/bacco/compare/v1.1.0...v1.2.0) (2026-10-07)
 
 
