@@ -56,6 +56,7 @@ describe('buildCsv', () => {
       'numero_foto',
       'in_cantina',
       'primo_assaggio',
+      'contrassegno_di_stato',
     ])
   })
 
@@ -129,5 +130,12 @@ describe('colonne della cantina', () => {
   it('record senza campi della cantina: 0 in cantina', () => {
     const [row] = rows(buildCsv([bottle()], {}))
     expect(row.in_cantina).toBe('0')
+  })
+})
+
+describe('contrassegno di Stato', () => {
+  it('esporta il seriale della fascetta', () => {
+    const [row] = rows(buildCsv([bottle({ stateSeal: 'ADK007842971' })], {}))
+    expect(row.contrassegno_di_stato).toBe('ADK007842971')
   })
 })

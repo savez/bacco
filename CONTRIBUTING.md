@@ -11,8 +11,8 @@ Sono le regole non negoziabili: una PR che le viola non viene accettata.
    semplice. Ogni nuova dipendenza va motivata.
 2. **Dati solo locali.** Bottiglie, foto, note e posizioni restano nell'IndexedDB del
    dispositivo: niente backend, account, analytics o telemetria. Le sole richieste di rete
-   ammesse sono in sola lettura verso servizi pubblici elencati nella CSP (tessere di
-   OpenStreetMap, Open Food Facts) e ricevono solo il minimo indispensabile. Niente
+   ammesse sono in sola lettura verso servizi pubblici elencati nella CSP (oggi solo le
+   tessere di OpenStreetMap) e ricevono solo il minimo indispensabile. Niente
    `v-html`, niente script inline, input sempre validati.
 3. **Offline-first.** Registrare, modificare e consultare il registro funziona senza rete;
    le funzioni di rete degradano senza bloccare nulla.
@@ -131,7 +131,7 @@ src/
 ├── composables/  # stato condiviso (banner, fotocamera, aggiornamenti PWA…)
 ├── db/           # Dexie / IndexedDB
 ├── backup/       # export JSON e CSV, import JSON
-└── lib/          # logica pura testata (validazione, formati, Open Food Facts…)
+└── lib/          # logica pura testata (validazione, formati, cantina…)
 tests/            # Vitest
 docker/           # nginx per il servizio "web"
 ```

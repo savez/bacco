@@ -5,7 +5,6 @@ import {
   updateBottle,
   deleteBottle,
   getBottle,
-  findLatestByBarcode,
   findSameLabel,
 } from '../../src/db/bottles.js'
 
@@ -147,20 +146,6 @@ describe('getBottle', () => {
   })
 })
 
-describe('findLatestByBarcode', () => {
-  it('restituisce il record più recente con quel codice, o undefined', async () => {
-    await createBottle({ ...sample(), barcode: '12345678', consumedAt: '2026-01-01T00:00:00.000Z' })
-    const newer = await createBottle({
-      ...sample(),
-      barcode: '12345678',
-      consumedAt: '2026-06-01T00:00:00.000Z',
-    })
-    const found = await findLatestByBarcode('12345678')
-    expect(found.id).toBe(newer.id)
-    expect(await findLatestByBarcode('99999999')).toBeUndefined()
-  })
-})
-
 describe('cantina nel ciclo di vita dell\'etichetta', () => {
   const movesOf = (id) => db.cellarMoves.where('bottleId').equals(id).toArray()
 
@@ -196,12 +181,7 @@ describe('cantina nel ciclo di vita dell\'etichetta', () => {
 })
 
 describe('findSameLabel', () => {
-  it('riconosce l\'etichetta dal codice a barre', async () => {
-    const barolo = await createBottle({ name: 'Barolo', type: 'wine', rating: 4, barcode: '8000000000001' })
-    expect((await findSameLabel({ barcode: '8000000000001', name: 'Altro nome' }))?.id).toBe(barolo.id)
-  })
-
-  it('senza codice, da nome, produttore e annata (senza badare ad accenti e maiuscole)', async () => {
+  it('da nome, produttore e annata (senza badare ad accenti e maiuscole)', async () => {
     const barolo = await createBottle({ name: 'Barolo Cannubì', producer: 'Borgogno', vintage: 2017, type: 'wine', rating: 4 })
     expect((await findSameLabel({ name: 'barolo cannubi', producer: 'BORGOGNO', vintage: 2017 }))?.id).toBe(barolo.id)
   })

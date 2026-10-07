@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateBottle, validateMove, isValidBarcode, isHttpsUrl, isValidGtinChecksum } from '../../src/lib/validate.js'
+import { validateBottle, validateMove, isValidBarcode, isHttpsUrl } from '../../src/lib/validate.js'
 
 const base = () => ({
   name: 'Barolo Cannubi',
@@ -216,19 +216,6 @@ describe('analisi organolettica, abbinamento, gradazione, sottocategoria', () =>
   })
 })
 
-describe('isValidGtinChecksum', () => {
-  it('riconosce cifre di controllo corrette', () => {
-    expect(isValidGtinChecksum('4006381333931')).toBe(true) // EAN-13
-    expect(isValidGtinChecksum('96385074')).toBe(true) // EAN-8
-    expect(isValidGtinChecksum('036000291452')).toBe(true) // UPC-A
-  })
-
-  it('segnala cifre di controllo sbagliate o lunghezze non GTIN', () => {
-    expect(isValidGtinChecksum('4006381333932')).toBe(false)
-    expect(isValidGtinChecksum('12345678901')).toBe(false)
-  })
-})
-
 describe('campi della cantina', () => {
   it('bevuta subito: tastedAt = consumedAt, niente cantina', () => {
     const res = validateBottle({ ...base(), consumedAt: '2026-10-01T20:00:00.000Z' })
@@ -289,5 +276,27 @@ describe('validateMove', () => {
     expect(validateMove({ id, bottleId, type: 'adjust', from: 4, to: -1, at }).ok).toBe(false)
     expect(validateMove({ id, bottleId, type: 'first', at: 'ieri' }).ok).toBe(false)
     expect(validateMove({ id: 'x', bottleId, type: 'first', at }).ok).toBe(false)
+  })
+})
+
+describe('contrassegno di Stato', () => {
+  const wine = () => ({ name: 'Barolo', type: 'wine', rating: 4 })
+
+  it('è facoltativo', () => {
+    expect(validateBottle(wine()).value.stateSeal).toBeNull()
+  })
+
+  it('normalizza maiuscole e spazi', () => {
+    expect(validateBottle({ ...wine(), stateSeal: ' adk 007842971 ' }).value.stateSeal).toBe('ADK007842971')
+  })
+
+  it('accetta solo lettere e cifre, da 6 a 20 caratteri', () => {
+    expect(validateBottle({ ...wine(), stateSeal: 'ADK-0078' }).errors?.stateSeal).toBeTruthy()
+    expect(validateBottle({ ...wine(), stateSeal: 'AB12' }).errors?.stateSeal).toBeTruthy()
+    expect(validateBottle({ ...wine(), stateSeal: 'A'.repeat(21) }).errors?.stateSeal).toBeTruthy()
+  })
+
+  it('vale solo per il vino', () => {
+    expect(validateBottle({ name: 'Tipopils', type: 'beer', rating: 4, stateSeal: 'ADK007842971' }).value.stateSeal).toBeNull()
   })
 })

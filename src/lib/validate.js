@@ -25,21 +25,6 @@ export function isValidBarcode(code) {
   return typeof code === 'string' && /^\d{8,14}$/.test(code)
 }
 
-/**
- * Cifra di controllo GTIN (stesso algoritmo per GTIN-8, 12, 13, 14): serve solo a
- * segnalare un probabile errore di battitura, non a rifiutare il codice.
- * @param {string} code
- */
-export function isValidGtinChecksum(code) {
-  if (!/^(\d{8}|\d{12,14})$/.test(code ?? '')) return false
-  const digits = [...code].map(Number)
-  const check = digits.pop()
-  const sum = digits
-    .reverse()
-    .reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 3 : 1), 0)
-  return (10 - (sum % 10)) % 10 === check
-}
-
 /** @param {string} url */
 export function isHttpsUrl(url) {
   if (typeof url !== 'string' || url.length === 0 || url.length > URL_MAX) return false
@@ -119,6 +104,18 @@ export function validateBottle(input, { now = new Date() } = {}) {
     value.appellation = appellation
   } else {
     value.appellation = appellation
+  }
+
+  // Contrassegno di Stato: il seriale della fascetta dei vini DOC e DOCG (es. ADK007842971).
+  // Si verifica con l'app ufficiale "Trust your wine" del Poligrafico; qui lo si conserva soltanto.
+  const stateSeal = cleanText(data.stateSeal ?? '').replace(/\s+/g, '').toUpperCase()
+  if (data.type !== 'wine' || stateSeal.length === 0) {
+    value.stateSeal = null
+  } else if (!/^[A-Z0-9]{6,20}$/.test(stateSeal)) {
+    errors.stateSeal = 'Il contrassegno ha solo lettere e cifre, es. ADK007842971.'
+    value.stateSeal = stateSeal
+  } else {
+    value.stateSeal = stateSeal
   }
 
   const tasting = cleanText(data.tasting || mergeLegacyTasting(data.aromas, data.taste))

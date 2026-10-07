@@ -9,12 +9,13 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import { router } from './router.js'
 import { applyTheme, getThemePreference } from './lib/theme.js'
-import { requestPersistentStorage } from './db/db.js'
+import { requestPersistentStorage, openDatabase } from './db/db.js'
 import { getSetting, setSetting } from './db/settings.js'
 import { captureInstallPrompt } from './lib/install.js'
 
 applyTheme(getThemePreference())
 requestPersistentStorage()
+openDatabase()
 captureInstallPrompt()
 
 getSetting('firstUseAt').then((value) => {

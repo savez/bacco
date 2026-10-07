@@ -152,7 +152,10 @@ function onDeleteConfirmed() {
         <NotesView :notes="bottle.notes" />
       </div>
 
-      <p v-if="bottle.barcode" class="mt-2 text-sm text-cenere">Codice a barre: {{ bottle.barcode }}</p>
+      <p v-if="bottle.stateSeal" class="mt-2 text-sm text-cenere">
+        Contrassegno di Stato: <span class="font-bold text-gesso">{{ bottle.stateSeal }}</span>
+        <span class="block text-xs">Verificalo con l'app Trust your wine del Poligrafico dello Stato.</span>
+      </p>
 
       <p v-if="bottle.location && !untasted" class="mt-2 text-sm text-cenere">
         Luogo:

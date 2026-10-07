@@ -4,22 +4,18 @@ import { useRoute, useRouter } from 'vue-router'
 import TypeToggle from '../components/TypeToggle.vue'
 import BottleRating from '../components/BottleRating.vue'
 import PhotoPicker from '../components/PhotoPicker.vue'
-import BarcodeScanner from '../components/BarcodeScanner.vue'
-import BarcodeField from '../components/BarcodeField.vue'
-import LookupStatus from '../components/LookupStatus.vue'
 import PermissionHelp from '../components/PermissionHelp.vue'
 import { explainLocationError } from '../lib/permissions.js'
-import { createBottle, updateBottle, getBottle, getSuggestions, findLatestByBarcode, findSameLabel } from '../db/bottles.js'
+import { createBottle, updateBottle, getBottle, getSuggestions, findSameLabel } from '../db/bottles.js'
 import { addToCellar } from '../db/cellar.js'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import { listPhotos, photoUrl } from '../db/photos.js'
-import { lookupBarcode } from '../lib/openFoodFacts.js'
 import { getCurrentLocation } from '../lib/geo.js'
-import { isValidBarcode, isValidGtinChecksum } from '../lib/validate.js'
 import { subtypesFor, APPELLATIONS } from '../lib/subtypes.js'
-import { computeFill } from '../lib/lookupFill.js'
 import { toDateAndTime, fromDateAndTime } from '../lib/format.js'
 import { showBanner } from '../composables/useBanner.js'
+import { withTimeout } from '../lib/timeout.js'
+import { requestCellarFilter } from '../lib/homeFilter.js'
 import { closeSheet } from '../composables/useSheet.js'
 
 const route = useRoute()
@@ -28,9 +24,14 @@ const isEdit = !!route.params.id
 // La modifica si apre nel pannello modale (che ha già il suo pulsante di chiusura).
 const inSheet = !!route.meta.modal
 const NOTES_MAX = 5000
+// Oltre questo tempo il salvataggio si considera bloccato: il bottone torna attivo.
+const SAVE_TIMEOUT_MS = 15000
 
 const form = reactive({
+  // Non più modificabile (la ricerca da codice a barre è stata tolta): resta solo per non
+  // perdere quello delle bottiglie registrate prima.
   barcode: '',
+  stateSeal: '',
   name: '',
   producer: '',
   vintage: '',
@@ -54,6 +55,8 @@ const bottleCount = ref('0')
 const toCellar = computed(() => !isEdit && Number(bottleCount.value) >= 1)
 // In modifica, un'etichetta mai stappata può ricevere il punteggio ma non lo richiede.
 const existingUntasted = ref(false)
+// Spiegazione del contrassegno di Stato (pulsante ⓘ accanto al campo).
+const sealInfoOpen = ref(false)
 
 const errors = ref({})
 const saving = ref(false)
@@ -104,111 +107,12 @@ watch(
     // una scritta a mano ("Altro") invece resta.
     if (previous && type !== previous && subtypesFor(previous).includes(form.subtype)) form.subtype = ''
     // La denominazione vale solo per il vino.
-    if (type !== 'wine') form.appellation = ''
-  },
-)
-
-// --- Codice a barre e ricerca (FR-024–027a) ----------------------------------------
-const scannerOpen = ref(false)
-const lookup = reactive({ phase: 'idle', filled: [] })
-const fieldSource = reactive({
-  name: null,
-  producer: null,
-  type: null,
-  subtype: null,
-  appellation: null,
-  vintage: null,
-  abv: null,
-})
-let applyingFromLookup = false
-let suppressLookup = false
-let scannedCode = null
-let lookupSeq = 0
-let debounceTimer
-
-for (const key of Object.keys(fieldSource)) {
-  watch(
-    () => form[key],
-    () => {
-      if (!applyingFromLookup) fieldSource[key] = null
-    },
-  )
-}
-
-/** Precompila solo i campi vuoti (src/lib/lookupFill.js); restituisce i campi compilati. */
-function applyFields(fields, source) {
-  const { updates, filled } = computeFill(form, fields)
-  applyingFromLookup = true
-  for (const [key, value] of Object.entries(updates)) {
-    form[key] = value
-    fieldSource[key] = source
-  }
-  nextTick(() => {
-    applyingFromLookup = false
-  })
-  return filled
-}
-
-async function runLookup(code) {
-  const seq = ++lookupSeq
-  lookup.filled = []
-  lookup.phase = 'registry'
-  const fromRegistry = await findLatestByBarcode(code)
-  if (seq !== lookupSeq) return
-  if (fromRegistry) {
-    lookup.filled = applyFields(fromRegistry, 'registry')
-    lookup.phase = 'found-registry'
-    return
-  }
-  if (!navigator.onLine) {
-    lookup.phase = 'offline'
-    return
-  }
-  lookup.phase = 'online'
-  const result = await lookupBarcode(code)
-  if (seq !== lookupSeq) return
-  if (result.status === 'found') {
-    lookup.filled = applyFields(result.fields, 'off')
-    lookup.phase = 'found-off'
-  } else {
-    lookup.phase = { not_found: 'not-found', offline: 'offline' }[result.status] ?? 'error'
-  }
-}
-
-function lookupIfValid(code, delay) {
-  clearTimeout(debounceTimer)
-  if (isValidBarcode(code) && isValidGtinChecksum(code)) {
-    debounceTimer = setTimeout(() => runLookup(code), delay)
-  }
-}
-
-watch(
-  () => form.barcode,
-  (code) => {
-    if (code === scannedCode) {
-      // Codice appena letto dalla fotocamera: la ricerca è già partita.
-      scannedCode = null
-      return
+    if (type !== 'wine') {
+      form.appellation = ''
+      form.stateSeal = ''
     }
-    lookupSeq++ // annulla una ricerca in corso per il codice precedente
-    lookup.phase = 'idle'
-    lookup.filled = []
-    clearTimeout(debounceTimer)
-    if (suppressLookup) return
-    lookupIfValid(code, 600)
   },
 )
-
-function onBarcodeDetected(code) {
-  scannerOpen.value = false
-  // Il lettore ha già validato il codice: ricerca subito, senza passare dal controllo
-  // della cifra GTIN (che non vale per gli UPC-E a 8 cifre).
-  if (form.barcode !== code) {
-    scannedCode = code
-    form.barcode = code
-  }
-  runLookup(code)
-}
 
 // --- Posizione -----------------------------------------------------------------------
 const location = ref(null)
@@ -248,7 +152,6 @@ onMounted(async () => {
     loading.value = false
     return
   }
-  suppressLookup = true
   for (const key of Object.keys(form)) {
     if (key === 'consumedDate' || key === 'consumedTime') continue
     form[key] = existing[key] ?? (key === 'type' || key === 'rating' ? null : '')
@@ -268,7 +171,6 @@ onMounted(async () => {
   originalPhotoIds = existingPhotos.map((p) => p.id)
   loading.value = false
   await nextTick()
-  suppressLookup = false
 })
 
 function setNow() {
@@ -306,21 +208,22 @@ async function onSubmit({ allowDuplicate = false } = {}) {
 
   try {
     if (isEdit) {
-      await updateBottle(route.params.id, payload, { addPhotos, removePhotoIds })
+      await withTimeout(updateBottle(route.params.id, payload, { addPhotos, removePhotoIds }), SAVE_TIMEOUT_MS)
       showBanner({ id: 'bottle-saved', message: 'Modifiche salvate', priority: 30 })
       closeSheet(router, `/bottiglia/${route.params.id}`)
     } else {
       if (toCellar.value && !allowDuplicate) {
-        const match = await findSameLabel(payload)
+        const match = await withTimeout(findSameLabel(payload), SAVE_TIMEOUT_MS)
         if (match) {
           duplicate.value = { match, count }
           return
         }
       }
-      await createBottle(payload, { addPhotos })
+      await withTimeout(createBottle(payload, { addPhotos }), SAVE_TIMEOUT_MS)
       if (toCellar.value) {
         showBanner({ id: 'bottle-saved', message: count === 1 ? 'In cantina: 1 bottiglia' : `In cantina: ${count} bottiglie`, priority: 30 })
-        router.push({ path: '/', query: { cantina: '1' } })
+        requestCellarFilter()
+        router.push('/')
       } else {
         showBanner({ id: 'bottle-saved', message: 'Bottiglia salvata', priority: 30 })
         router.push('/')
@@ -336,7 +239,9 @@ async function onSubmit({ allowDuplicate = false } = {}) {
         message:
           err?.name === 'QuotaExceededError'
             ? 'Spazio esaurito sul dispositivo: la bottiglia non è stata salvata. Elimina qualche foto o fai un backup.'
-            : 'Impossibile salvare la bottiglia. Riprova.',
+            : err?.name === 'TimeoutError'
+              ? 'Il salvataggio non risponde: chiudi le altre finestre di Bacco, riaprila e riprova.'
+              : `Impossibile salvare la bottiglia (${err?.name ?? 'errore'}). Riprova.`,
         tone: 'error',
         priority: 100,
       })
@@ -363,10 +268,6 @@ function onCreateAnyway() {
   onSubmit({ allowDuplicate: true })
 }
 
-function sourceLabel(key) {
-  return fieldSource[key] === 'registry' ? 'dal tuo registro' : 'da Open Food Facts'
-}
-
 const inputClass = 'mt-1 min-h-11 w-full rounded-md border border-rame/30 bg-doga px-3 text-gesso'
 const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
 </script>
@@ -390,13 +291,6 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
         <PhotoPicker v-model="photos" />
       </fieldset>
 
-      <fieldset>
-        <legend class="section-title">Codice a barre</legend>
-        <BarcodeField v-model="form.barcode" @scan="scannerOpen = true" @submit="lookupIfValid(form.barcode, 0)" />
-        <LookupStatus :code="form.barcode" :phase="lookup.phase" :filled="lookup.filled" />
-        <p v-if="errors.barcode" class="mt-1 text-sm text-feccia">{{ errors.barcode }}</p>
-      </fieldset>
-
       <!-- Ordine del modulo: riconosco (foto, codice) → descrivo (cos'è) → decido (cantina o la
            bevo adesso) → assaggio → note → quando e dove → scheda tecnica. -->
       <fieldset class="space-y-4">
@@ -406,7 +300,6 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
           <div :ref="setFieldRef('type')" tabindex="-1" class="mt-1">
             <TypeToggle v-model="form.type" />
           </div>
-          <p v-if="fieldSource.type" class="source-tag">{{ sourceLabel('type') }}</p>
           <p v-if="errors.type" class="mt-1 text-sm text-feccia">{{ errors.type }}</p>
         </div>
 
@@ -448,7 +341,6 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
             placeholder="Es. Saison, Orange wine"
             :class="inputClass"
           />
-          <p v-if="fieldSource.subtype" class="source-tag">{{ sourceLabel('subtype') }}</p>
         </div>
 
         <div>
@@ -467,7 +359,6 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
           <datalist id="name-suggestions">
             <option v-for="n in suggestions.names" :key="n" :value="n" />
           </datalist>
-          <p v-if="fieldSource.name" class="source-tag">{{ sourceLabel('name') }}</p>
           <p v-if="errors.name" id="name-error" class="mt-1 text-sm text-feccia">{{ errors.name }}</p>
         </div>
 
@@ -477,7 +368,6 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
           <datalist id="producer-suggestions">
             <option v-for="p in suggestions.producers" :key="p" :value="p" />
           </datalist>
-          <p v-if="fieldSource.producer" class="source-tag">{{ sourceLabel('producer') }}</p>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
@@ -491,7 +381,6 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
               :class="inputClass"
               :aria-invalid="!!errors.vintage"
             />
-            <p v-if="fieldSource.vintage" class="source-tag">{{ sourceLabel('vintage') }}</p>
           </div>
           <div>
             <label for="abv" class="field-label">Gradazione</label>
@@ -510,7 +399,6 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
                 % vol
               </span>
             </div>
-            <p v-if="fieldSource.abv" class="source-tag">{{ sourceLabel('abv') }}</p>
           </div>
         </div>
         <p v-if="errors.vintage" class="text-sm text-feccia">{{ errors.vintage }}</p>
@@ -533,8 +421,45 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
               {{ option }}
             </button>
           </div>
-          <p v-if="fieldSource.appellation" class="source-tag">{{ sourceLabel('appellation') }}</p>
           <p v-if="errors.appellation" class="mt-1 text-sm text-feccia">{{ errors.appellation }}</p>
+        </div>
+
+        <div v-if="form.type === 'wine'">
+          <div class="flex items-center gap-1">
+            <label for="stateSeal" class="field-label">Contrassegno di Stato</label>
+            <button
+              type="button"
+              class="-my-2 flex h-11 w-11 items-center justify-center rounded-full text-cenere"
+              :aria-expanded="sealInfoOpen"
+              aria-controls="state-seal-info"
+              aria-label="Che cos'è il contrassegno di Stato"
+              @click="sealInfoOpen = !sealInfoOpen"
+            >
+              <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 11v5M12 8h.01" />
+              </svg>
+            </button>
+          </div>
+          <p v-if="sealInfoOpen" id="state-seal-info" class="mb-2 rounded-md border border-rame/30 bg-doga p-3 text-sm text-gesso">
+            È il codice sulla fascetta di Stato al collo delle bottiglie DOC e DOCG (es. ADK007842971).
+            Puoi verificarne l'autenticità con l'app ufficiale <strong>Trust your wine</strong> del
+            Poligrafico e Zecca dello Stato.
+          </p>
+          <input
+            id="stateSeal"
+            v-model="form.stateSeal"
+            type="text"
+            autocapitalize="characters"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="24"
+            placeholder="Es. ADK007842971"
+            :class="[inputClass, 'uppercase']"
+            :aria-invalid="!!errors.stateSeal"
+            :aria-describedby="errors.stateSeal ? 'state-seal-error' : undefined"
+          />
+          <p v-if="errors.stateSeal" id="state-seal-error" class="mt-1 text-sm text-feccia">{{ errors.stateSeal }}</p>
         </div>
       </fieldset>
 
@@ -688,8 +613,6 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
       @cancel="onCreateAnyway"
       @dismiss="duplicate = null"
     />
-
-    <BarcodeScanner v-if="scannerOpen" @detected="onBarcodeDetected" @close="scannerOpen = false" />
   </div>
 </template>
 
@@ -706,10 +629,5 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
   display: block;
   font-size: 0.875rem;
   font-weight: 700;
-}
-.source-tag {
-  margin-top: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--c-rame);
 }
 </style>
