@@ -1,0 +1,189 @@
+/* Stessa palette "cantina" dell'app (src/assets/main.css su main). */
+:root {
+  color-scheme: dark;
+  --botte: #1c1613;
+  --doga: #2a211c;
+  --doga-alta: #33281f;
+  --gesso: #ede6d8;
+  --cenere: #b5a99a;
+  --feccia: #c9607f;
+  --luppolo: #e0ac4a;
+  --rame: #c08050;
+  --linea: rgba(192, 128, 80, 0.22);
+
+  --radius: 20px;
+  --container: 1120px;
+  --font-display: 'Big Shoulders Stencil Display', 'Arial Narrow', sans-serif;
+  --font-sans: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--botte);
+  color: var(--gesso);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Doghe della botte: righe verticali leggerissime su tutta la pagina. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: repeating-linear-gradient(90deg, transparent 0 159px, rgba(192, 128, 80, 0.05) 159px 160px);
+  pointer-events: none;
+}
+
+a {
+  color: var(--luppolo);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--rame);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 0.95;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+.container {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 clamp(1rem, 4vw, 2.5rem);
+}
+
+.section {
+  padding: clamp(4rem, 10vw, 7rem) 0;
+}
+
+/* Cerchio della botte: separatore tra le sezioni. */
+.hoop {
+  height: 8px;
+  background: rgba(192, 128, 80, 0.16);
+  border-block: 1px solid var(--linea);
+}
+
+.eyebrow {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--rame);
+  margin-bottom: 0.75rem;
+}
+
+.section-title {
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  max-width: 18ch;
+}
+
+.section-sub {
+  color: var(--cenere);
+  margin-top: 1rem;
+  max-width: 58ch;
+  font-size: 1.1rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  padding: 0 1.4rem;
+  border-radius: 999px;
+  font-weight: 700;
+  border: 2px solid transparent;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.btn:hover {
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: var(--feccia);
+  color: var(--botte);
+  box-shadow: 0 10px 30px -12px var(--feccia);
+}
+
+.btn-secondary {
+  border-color: var(--linea);
+  color: var(--gesso);
+}
+
+.btn-secondary:hover {
+  border-color: var(--rame);
+}
+
+.card {
+  background: var(--doga);
+  border: 1px solid var(--linea);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+}
+
+.grid-3 {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2.5rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 720px) {
+  .grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

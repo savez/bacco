@@ -1,0 +1,40 @@
+---
+const features = [
+  { title: 'Registri in pochi tocchi', body: 'Nome, tipo e punteggio bastano. Tutto il resto è facoltativo e lo aggiungi quando vuoi.' },
+  { title: 'Foto e codice a barre', body: "Scatta l'etichetta dall'app e scansiona il codice: Open Food Facts compila i campi che mancano." },
+  { title: 'Una scheda vera', body: 'Rosso, Bianco, IPA, Stout… denominazione DOCG, DOC, IGT, IGP, annata, gradazione, abbinamento e note.' },
+  { title: 'Il tuo registro', body: 'Cerca per nome o produttore, filtra per vino o birra, anno e mese. Mille bottiglie scorrono senza fatica.' },
+  { title: 'La mappa delle bevute', body: 'Se vuoi, salva dove eri: Bacco ti mostra i posti dei tuoi brindisi su OpenStreetMap.' },
+  { title: 'Card da condividere', body: 'Una card in stile social con foto, punteggio e note per dire agli amici cosa hai stappato.' },
+]
+---
+
+<section class="section" id="funzioni">
+  <div class="container">
+    <span class="eyebrow">Cosa fa</span>
+    <h2 class="section-title">Dal tappo al ricordo.</h2>
+    <p class="section-sub">
+      Pensata per il telefono, mentre la bottiglia è ancora sul tavolo: si apre subito, si usa con una mano.
+    </p>
+    <div class="grid-3">
+      {
+        features.map((f) => (
+          <article class="card">
+            <h3>{f.title}</h3>
+            <p>{f.body}</p>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  h3 {
+    font-size: 1.15rem;
+    margin-bottom: 0.5rem;
+  }
+  p {
+    color: var(--cenere);
+  }
+</style>

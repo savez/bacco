@@ -1,0 +1,36 @@
+---
+const points = [
+  { title: 'Tutto sul telefono', body: 'Bottiglie, foto, note e luoghi vivono nel database del browser. Nessun account, nessun cloud.' },
+  { title: 'Nessun tracciamento', body: 'Niente analytics né pubblicità. La rete serve solo per la mappa e per cercare un codice a barre.' },
+  { title: 'Il backup è tuo', body: 'Esporta tutto in JSON con le foto o in CSV per il foglio di calcolo. Bacco ti ricorda di farlo ogni 30 giorni.' },
+]
+---
+
+<section class="section" id="privacy">
+  <div class="container">
+    <span class="eyebrow">Privacy</span>
+    <h2 class="section-title">I tuoi bicchieri sono affari tuoi.</h2>
+    <p class="section-sub">Bacco non ha un server: non c'è niente da violare, vendere o perdere.</p>
+    <div class="grid-3">
+      {
+        points.map((p) => (
+          <article class="card">
+            <h3>{p.title}</h3>
+            <p>{p.body}</p>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  h3 {
+    font-size: 1.15rem;
+    margin-bottom: 0.5rem;
+    color: var(--luppolo);
+  }
+  p {
+    color: var(--cenere);
+  }
+</style>

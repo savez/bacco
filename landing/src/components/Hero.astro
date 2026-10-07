@@ -1,0 +1,119 @@
+---
+import { meta } from '../data/meta.js'
+const base = import.meta.env.BASE_URL
+---
+
+<section class="hero" id="top">
+  <div class="container hero-inner">
+    <div class="copy">
+      <p class="pills">
+        <span>PWA</span><span>Offline</span><span>Open source</span><span>Dati solo sul telefono</span>
+      </p>
+      <h1>{meta.tagline}</h1>
+      <p class="sub">
+        Bacco è il diario dei vini e delle birre che bevi: foto dell'etichetta, punteggio,
+        analisi organolettica, con cosa l'hai mangiato e dove eri. Funziona senza rete e
+        non manda i tuoi dati da nessuna parte.
+      </p>
+      <div class="cta">
+        <a class="btn btn-primary" href={meta.appUrl} rel="noopener noreferrer" target="_blank">Apri Bacco</a>
+        <a class="btn btn-secondary" href={meta.githubUrl} rel="noopener noreferrer" target="_blank">Codice su GitHub</a>
+      </div>
+      <p class="note">Gratis, senza account. Installala sulla schermata Home in due tocchi.</p>
+    </div>
+
+    <div class="phones" aria-hidden="true">
+      <img class="phone back" src={`${base}screens/dettaglio-dark.png`} alt="" width="390" height="844" />
+      <img class="phone front" src={`${base}screens/registro-dark.png`} alt="" width="390" height="844" />
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding: clamp(3rem, 8vw, 6rem) 0 clamp(4rem, 9vw, 7rem);
+  }
+  /* Bagliore di vino e di birra dietro i telefoni. */
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: -20% -10% auto auto;
+    width: min(900px, 120vw);
+    height: 760px;
+    background:
+      radial-gradient(closest-side at 38% 48%, rgba(201, 96, 127, 0.22), transparent),
+      radial-gradient(closest-side at 70% 60%, rgba(224, 172, 74, 0.16), transparent);
+    pointer-events: none;
+  }
+  .hero-inner {
+    position: relative;
+    display: grid;
+    gap: 3rem;
+    align-items: center;
+  }
+  .pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .pills span {
+    border: 1px solid var(--linea);
+    border-radius: 999px;
+    padding: 0.2rem 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--cenere);
+  }
+  h1 {
+    margin-top: 1.5rem;
+    font-size: clamp(3.2rem, 9vw, 6.5rem);
+    max-width: 12ch;
+  }
+  .sub {
+    margin-top: 1.5rem;
+    color: var(--cenere);
+    font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+    max-width: 52ch;
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+  }
+  .note {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: var(--cenere);
+  }
+  .phones {
+    position: relative;
+    height: clamp(420px, 60vw, 600px);
+  }
+  .phone {
+    position: absolute;
+    width: clamp(190px, 26vw, 280px);
+    height: auto;
+    border-radius: 34px;
+    border: 6px solid #0f0b09;
+    box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.9), 0 0 0 1px var(--linea);
+  }
+  .front {
+    left: 50%;
+    top: 0;
+    transform: translateX(-80%) rotate(-5deg);
+  }
+  .back {
+    left: 50%;
+    top: 8%;
+    transform: translateX(-10%) rotate(6deg);
+    opacity: 0.92;
+  }
+  @media (min-width: 960px) {
+    .hero-inner {
+      grid-template-columns: 1.1fr 0.9fr;
+    }
+  }
+</style>

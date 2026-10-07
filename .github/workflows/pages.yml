@@ -1,0 +1,70 @@
+# Pubblica la landing (cartella landing/ del branch `landing`) su GitHub Pages.
+# Il branch `landing` non va MAI unito a `main`.
+name: Deploy landing su GitHub Pages
+
+on:
+  push:
+    branches: [landing]
+  # Avviato anche da release-please su main dopo ogni release, per aggiornare la versione.
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: landing/package-lock.json
+
+      - name: Versione dell'app da main
+        id: appver
+        run: |
+          git fetch --depth=1 origin main:refs/remotes/origin/main
+          VERSION=$(git show origin/main:package.json | node -p "JSON.parse(require('fs').readFileSync(0, 'utf8')).version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Versione dell'app: $VERSION"
+
+      # Indirizzo e percorso del sito: savez.github.io + /bacco, oppure il dominio
+      # personalizzato + / se configurato in Settings → Pages.
+      - name: Configura Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - run: npm ci
+        working-directory: landing
+
+      - run: npm run build
+        working-directory: landing
+        env:
+          ASTRO_TELEMETRY_DISABLED: 1
+          PUBLIC_APP_VERSION: ${{ steps.appver.outputs.version }}
+          SITE_URL: ${{ steps.pages.outputs.origin }}
+          BASE_PATH: ${{ steps.pages.outputs.base_path || '/' }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: landing/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Pubblica su GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

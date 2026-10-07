@@ -1,0 +1,69 @@
+---
+import { meta } from '../data/meta.js'
+const base = import.meta.env.BASE_URL
+---
+
+<nav class="nav" aria-label="Principale">
+  <div class="container nav-inner">
+    <a href="#top" class="brand">
+      <img src={`${base}favicon.svg`} alt="" width="32" height="32" />
+      <span>{meta.appName}</span>
+    </a>
+    <div class="links">
+      <a href={meta.githubUrl} rel="noopener noreferrer" target="_blank">GitHub</a>
+      <a class="open" href={meta.appUrl} rel="noopener noreferrer" target="_blank">Apri l'app</a>
+    </div>
+  </div>
+</nav>
+
+<style>
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(28, 22, 19, 0.82);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--linea);
+  }
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 64px;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--gesso);
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .brand img {
+    border-radius: 8px;
+  }
+  .brand:hover {
+    text-decoration: none;
+  }
+  .links {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    font-weight: 700;
+  }
+  .links a {
+    color: var(--cenere);
+  }
+  .links .open {
+    color: var(--botte);
+    background: var(--feccia);
+    border-radius: 999px;
+    padding: 0.45rem 1rem;
+  }
+  .links .open:hover {
+    text-decoration: none;
+  }
+</style>

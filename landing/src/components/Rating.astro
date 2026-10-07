@@ -1,0 +1,86 @@
+---
+import Bottles from './Bottles.astro'
+import { ratingLevels } from '../data/meta.js'
+const base = import.meta.env.BASE_URL
+---
+
+<section class="section rating" id="punteggio">
+  <div class="container rating-inner">
+    <div>
+      <span class="eyebrow">Il punteggio</span>
+      <h2 class="section-title">Cinque bottiglie, non cinque stelle.</h2>
+      <p class="section-sub">
+        Ogni livello ha una descrizione fissa, così il tuo "4" di oggi vale quanto quello di un anno fa.
+        Calici per il vino, boccali dorati per la birra.
+      </p>
+      <ol class="levels">
+        {
+          ratingLevels.map((l) => (
+            <li>
+              <Bottles value={l.value} type={l.value % 2 ? 'wine' : 'beer'} />
+              <div>
+                <strong>{l.label}</strong>
+                <span>{l.description}</span>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+    <img
+      class="shot"
+      src={`${base}screens/condividi-dark.png`}
+      alt="La card da condividere di un Barolo con punteggio 5 su 5"
+      width="390"
+      height="844"
+      loading="lazy"
+    />
+  </div>
+</section>
+
+<style>
+  .rating {
+    background: linear-gradient(180deg, transparent, rgba(42, 33, 28, 0.6) 30%, transparent);
+  }
+  .rating-inner {
+    display: grid;
+    gap: 3rem;
+    align-items: center;
+  }
+  .levels {
+    list-style: none;
+    padding: 0;
+    margin: 2.5rem 0 0;
+    display: grid;
+    gap: 0.75rem;
+  }
+  .levels li {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.9rem 1rem;
+    background: var(--doga);
+    border: 1px solid var(--linea);
+    border-radius: 14px;
+  }
+  .levels strong {
+    display: block;
+  }
+  .levels span {
+    color: var(--cenere);
+    font-size: 0.95rem;
+  }
+  .shot {
+    width: min(300px, 80%);
+    margin: 0 auto;
+    border-radius: 30px;
+    border: 6px solid #0f0b09;
+    box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.9);
+  }
+  @media (min-width: 900px) {
+    .rating-inner {
+      grid-template-columns: 1.2fr 0.8fr;
+    }
+  }
+</style>

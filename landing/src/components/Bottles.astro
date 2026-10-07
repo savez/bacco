@@ -1,0 +1,35 @@
+---
+// Punteggio a bottiglie, come nell'app: `value` piene su 5. Solo decorazione.
+interface Props {
+  value: number
+  type?: 'wine' | 'beer'
+  size?: number
+}
+const { value, type = 'wine', size = 22 } = Astro.props
+const WINE = 'M10.5 5H13.5V14C13.5 16 19 16.5 19 21V44A2 2 0 0 1 17 46H7A2 2 0 0 1 5 44V21C5 16.5 10.5 16 10.5 14Z'
+const BEER = 'M10 5.5H14V16C14 19 18 20 18 25V44A2 2 0 0 1 16 46H8A2 2 0 0 1 6 44V25C6 20 10 19 10 16Z'
+const color = type === 'wine' ? 'var(--feccia)' : 'var(--luppolo)'
+---
+
+<span class="bottles" aria-hidden="true">
+  {
+    [1, 2, 3, 4, 5].map((i) => (
+      <svg viewBox="0 0 24 48" width={size / 2} height={size}>
+        <path
+          d={type === 'wine' ? WINE : BEER}
+          fill={i <= value ? color : 'none'}
+          stroke={i <= value ? color : 'var(--cenere)'}
+          stroke-width="1.8"
+        />
+      </svg>
+    ))
+  }
+</span>
+
+<style>
+  .bottles {
+    display: inline-flex;
+    gap: 3px;
+    align-items: flex-end;
+  }
+</style>

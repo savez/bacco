@@ -1,0 +1,57 @@
+---
+import '@fontsource/big-shoulders-stencil-display/latin-700'
+import '@fontsource/atkinson-hyperlegible-next/latin-400'
+import '@fontsource/atkinson-hyperlegible-next/latin-700'
+import '../styles/global.css'
+
+import Nav from '../components/Nav.astro'
+import Hero from '../components/Hero.astro'
+import Features from '../components/Features.astro'
+import Rating from '../components/Rating.astro'
+import Privacy from '../components/Privacy.astro'
+import Install from '../components/Install.astro'
+import OpenSource from '../components/OpenSource.astro'
+import Support from '../components/Support.astro'
+import Footer from '../components/Footer.astro'
+import { meta } from '../data/meta.js'
+
+const base = import.meta.env.BASE_URL
+const pageUrl = new URL(base, Astro.site).href
+const ogImage = new URL(`${base}og.png`, Astro.site).href
+---
+
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#1C1613" />
+    <title>{meta.appName} — {meta.tagline}</title>
+    <meta name="description" content={meta.description} />
+    <link rel="canonical" href={pageUrl} />
+    <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={`${meta.appName} — ${meta.tagline}`} />
+    <meta property="og:description" content={meta.description} />
+    <meta property="og:url" content={pageUrl} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="640" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <Nav />
+    <main>
+      <Hero />
+      <div class="hoop"></div>
+      <Features />
+      <Rating />
+      <Privacy />
+      <div class="hoop"></div>
+      <Install />
+      <OpenSource />
+      <Support />
+    </main>
+    <Footer />
+  </body>
+</html>

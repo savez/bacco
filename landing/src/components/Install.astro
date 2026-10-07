@@ -1,0 +1,44 @@
+---
+import { meta } from '../data/meta.js'
+const steps = [
+  { label: 'iPhone', body: 'Apri Bacco in Safari → Condividi → "Aggiungi alla schermata Home".' },
+  { label: 'Android', body: 'Apri Bacco in Chrome → menu ⋮ → "Installa app".' },
+  { label: 'Computer', body: "Chrome o Edge → icona di installazione nella barra degli indirizzi." },
+]
+---
+
+<section class="section" id="installa">
+  <div class="container">
+    <span class="eyebrow">Installazione</span>
+    <h2 class="section-title">Mettila sulla Home.</h2>
+    <p class="section-sub">
+      Nessuno store: è una PWA. Una volta installata si apre come un'app e funziona anche in cantina, senza campo.
+    </p>
+    <div class="grid-3">
+      {
+        steps.map((s) => (
+          <article class="card">
+            <h3>{s.label}</h3>
+            <p>{s.body}</p>
+          </article>
+        ))
+      }
+    </div>
+    <p class="go">
+      <a class="btn btn-primary" href={meta.appUrl} rel="noopener noreferrer" target="_blank">Apri Bacco</a>
+    </p>
+  </div>
+</section>
+
+<style>
+  h3 {
+    font-size: 1.15rem;
+    margin-bottom: 0.5rem;
+  }
+  p {
+    color: var(--cenere);
+  }
+  .go {
+    margin-top: 2rem;
+  }
+</style>
