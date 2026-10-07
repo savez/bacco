@@ -279,7 +279,7 @@ function setNow() {
 
 async function focusFirstError() {
   await nextTick()
-  const firstKey = ['bottles', 'name', 'type', 'rating'].find((k) => errors.value[k])
+  const firstKey = ['type', 'name', 'bottles', 'rating'].find((k) => errors.value[k])
   fieldRefs.value[firstKey]?.focus?.()
 }
 
@@ -397,8 +397,60 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
         <p v-if="errors.barcode" class="mt-1 text-sm text-feccia">{{ errors.barcode }}</p>
       </fieldset>
 
+      <!-- Ordine del modulo: riconosco (foto, codice) → descrivo (cos'è) → decido (cantina o la
+           bevo adesso) → assaggio → note → quando e dove → scheda tecnica. -->
       <fieldset class="space-y-4">
-        <legend class="section-title">Bottiglia</legend>
+        <legend class="section-title">Cos'è</legend>
+        <div>
+          <p class="field-label">Tipo *</p>
+          <div :ref="setFieldRef('type')" tabindex="-1" class="mt-1">
+            <TypeToggle v-model="form.type" />
+          </div>
+          <p v-if="fieldSource.type" class="source-tag">{{ sourceLabel('type') }}</p>
+          <p v-if="errors.type" class="mt-1 text-sm text-feccia">{{ errors.type }}</p>
+        </div>
+
+        <div v-if="form.type">
+          <p id="subtype-label" class="field-label">{{ form.type === 'wine' ? 'Che vino' : 'Che birra' }}</p>
+          <div role="group" aria-labelledby="subtype-label" class="mt-1 flex flex-wrap gap-2">
+            <button
+              v-for="option in subtypeOptions"
+              :key="option"
+              type="button"
+              :aria-pressed="form.subtype === option"
+              :class="[
+                chipClass,
+                form.subtype === option
+                  ? form.type === 'wine'
+                    ? 'border-feccia bg-feccia text-botte'
+                    : 'border-luppolo bg-luppolo text-doga'
+                  : 'border-rame/30 text-cenere',
+              ]"
+              @click="pickSubtype(option)"
+            >
+              {{ option }}
+            </button>
+            <button
+              type="button"
+              :aria-pressed="showOther"
+              :class="[chipClass, showOther ? 'border-rame bg-rame text-doga' : 'border-rame/30 text-cenere']"
+              @click="pickOther"
+            >
+              Altro…
+            </button>
+          </div>
+          <input
+            v-if="showOther"
+            v-model="form.subtype"
+            type="text"
+            maxlength="40"
+            aria-label="Altra sottocategoria"
+            placeholder="Es. Saison, Orange wine"
+            :class="inputClass"
+          />
+          <p v-if="fieldSource.subtype" class="source-tag">{{ sourceLabel('subtype') }}</p>
+        </div>
+
         <div>
           <label for="name" class="field-label">Nome *</label>
           <input
@@ -463,77 +515,6 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
         </div>
         <p v-if="errors.vintage" class="text-sm text-feccia">{{ errors.vintage }}</p>
         <p v-if="errors.abv" class="text-sm text-feccia">{{ errors.abv }}</p>
-        <div v-if="!isEdit">
-          <label for="bottles" class="field-label">Bottiglie in cantina</label>
-          <input
-            id="bottles"
-            :ref="setFieldRef('bottles')"
-            v-model="bottleCount"
-            type="number"
-            inputmode="numeric"
-            min="0"
-            max="999"
-            step="1"
-            aria-describedby="bottles-help"
-            :class="[inputClass, 'max-w-32']"
-            :aria-invalid="!!errors.bottles"
-          />
-          <p id="bottles-help" class="mt-1 text-sm text-cenere">
-            {{ toCellar ? 'Vanno in cantina: punteggio e analisi te li chiedo alla prima bottiglia stappata.' : '0 = la bevo adesso. Con 1 o più vanno in cantina.' }}
-          </p>
-          <p v-if="errors.bottles" class="mt-1 text-sm text-feccia">{{ errors.bottles }}</p>
-        </div>
-
-        <div>
-          <p class="field-label">Tipo *</p>
-          <div :ref="setFieldRef('type')" tabindex="-1" class="mt-1">
-            <TypeToggle v-model="form.type" />
-          </div>
-          <p v-if="fieldSource.type" class="source-tag">{{ sourceLabel('type') }}</p>
-          <p v-if="errors.type" class="mt-1 text-sm text-feccia">{{ errors.type }}</p>
-        </div>
-
-        <div v-if="form.type">
-          <p id="subtype-label" class="field-label">{{ form.type === 'wine' ? 'Che vino' : 'Che birra' }}</p>
-          <div role="group" aria-labelledby="subtype-label" class="mt-1 flex flex-wrap gap-2">
-            <button
-              v-for="option in subtypeOptions"
-              :key="option"
-              type="button"
-              :aria-pressed="form.subtype === option"
-              :class="[
-                chipClass,
-                form.subtype === option
-                  ? form.type === 'wine'
-                    ? 'border-feccia bg-feccia text-botte'
-                    : 'border-luppolo bg-luppolo text-doga'
-                  : 'border-rame/30 text-cenere',
-              ]"
-              @click="pickSubtype(option)"
-            >
-              {{ option }}
-            </button>
-            <button
-              type="button"
-              :aria-pressed="showOther"
-              :class="[chipClass, showOther ? 'border-rame bg-rame text-doga' : 'border-rame/30 text-cenere']"
-              @click="pickOther"
-            >
-              Altro…
-            </button>
-          </div>
-          <input
-            v-if="showOther"
-            v-model="form.subtype"
-            type="text"
-            maxlength="40"
-            aria-label="Altra sottocategoria"
-            placeholder="Es. Saison, Orange wine"
-            :class="inputClass"
-          />
-          <p v-if="fieldSource.subtype" class="source-tag">{{ sourceLabel('subtype') }}</p>
-        </div>
-
         <div v-if="form.type === 'wine'">
           <p id="appellation-label" class="field-label">Denominazione</p>
           <div role="group" aria-labelledby="appellation-label" class="mt-1 flex flex-wrap gap-2">
@@ -557,16 +538,40 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
         </div>
       </fieldset>
 
-      <fieldset v-if="!toCellar">
-        <legend class="section-title">{{ existingUntasted ? 'Punteggio' : 'Punteggio *' }}</legend>
-        <div :ref="setFieldRef('rating')" tabindex="-1">
-          <BottleRating v-model="form.rating" :type="form.type" :invalid="!!errors.rating" />
+      <fieldset v-if="!isEdit">
+        <legend class="section-title">Cantina</legend>
+        <div>
+          <label for="bottles" class="field-label">Bottiglie in cantina</label>
+          <input
+            id="bottles"
+            :ref="setFieldRef('bottles')"
+            v-model="bottleCount"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            max="999"
+            step="1"
+            aria-describedby="bottles-help"
+            :class="[inputClass, 'max-w-32']"
+            :aria-invalid="!!errors.bottles"
+          />
+          <p id="bottles-help" class="mt-1 text-sm text-cenere">
+            {{ toCellar ? 'Vanno in cantina: punteggio e analisi te li chiedo alla prima bottiglia stappata.' : '0 = la bevo adesso · 1 o più = la metto in cantina.' }}
+          </p>
+          <p v-if="errors.bottles" class="mt-1 text-sm text-feccia">{{ errors.bottles }}</p>
         </div>
       </fieldset>
 
-      <fieldset class="space-y-4">
-        <legend class="section-title">{{ toCellar ? 'Note' : 'Degustazione' }}</legend>
-        <div v-if="!toCellar">
+      <!-- Con bottiglie in cantina l'assaggio arriva al primo stappo: il blocco sparisce intero. -->
+      <fieldset v-if="!toCellar" class="space-y-4">
+        <legend class="section-title">Assaggio</legend>
+        <fieldset>
+          <legend class="field-label">{{ existingUntasted ? 'Punteggio' : 'Punteggio *' }}</legend>
+          <div :ref="setFieldRef('rating')" tabindex="-1">
+            <BottleRating v-model="form.rating" :type="form.type" :invalid="!!errors.rating" />
+          </div>
+        </fieldset>
+        <div>
           <label for="tasting" class="field-label">Analisi organolettica personale</label>
           <textarea
             id="tasting"
@@ -579,12 +584,16 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
           ></textarea>
           <p v-if="errors.tasting" class="mt-1 text-sm text-feccia">{{ errors.tasting }}</p>
         </div>
-        <div v-if="!toCellar">
+        <div>
           <label for="pairing" class="field-label">Con cosa l'ho mangiato</label>
           <input id="pairing" v-model="form.pairing" type="text" maxlength="500" placeholder="Es. brasato, pizza margherita" :class="inputClass" />
         </div>
+      </fieldset>
+
+      <fieldset>
+        <legend class="section-title">Note</legend>
         <div>
-          <label for="notes" :class="toCellar ? 'sr-only' : 'field-label'">Note</label>
+          <label for="notes" class="sr-only">Note</label>
           <textarea
             id="notes"
             v-model="form.notes"
@@ -597,7 +606,7 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
       </fieldset>
 
       <fieldset class="space-y-4">
-        <legend class="section-title">Quando e dove</legend>
+        <legend class="section-title">{{ toCellar ? 'Registrata quando e dove' : 'Quando e dove' }}</legend>
         <div>
           <div class="grid grid-cols-[1fr_9rem] gap-3">
             <div>
