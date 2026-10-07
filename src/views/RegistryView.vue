@@ -4,6 +4,8 @@ import { RouterLink } from 'vue-router'
 import { takeCellarFilterRequest } from '../lib/homeFilter.js'
 import BottleRow from '../components/BottleRow.vue'
 import ShareCardDialog from '../components/ShareCardDialog.vue'
+import FirstTastingDialog from '../components/FirstTastingDialog.vue'
+import { useUncork } from '../composables/useUncork.js'
 import { liveBottles } from '../db/bottles.js'
 import { useLiveQuery } from '../composables/useLiveQuery.js'
 import { filterBottles, groupByMonth, availableYears, availableMonths, cellarSummary, tastedDate } from '../lib/search.js'
@@ -18,9 +20,25 @@ const sharing = ref(null)
 // --- Filtri ---------------------------------------------------------------------------
 const query = ref('')
 const type = ref(null)
-// Filtro "In cantina" (specs/002-cellar-inventory): già attivo quando si arriva dal modulo
-// dopo aver messo bottiglie in cantina.
-const cellar = ref(takeCellarFilterRequest())
+// Schede Diario | Cantina (specs/003-cantina-viva-ui). Si riapre l'ultima scheda usata su
+// questo dispositivo; dopo "Metti in cantina" si apre comunque la Cantina.
+const TAB_KEY = 'bacco.homeTab'
+function readTab() {
+  try {
+    return localStorage.getItem(TAB_KEY) === 'cantina' ? 'cantina' : 'diario'
+  } catch {
+    return 'diario'
+  }
+}
+const tab = ref(takeCellarFilterRequest() ? 'cantina' : readTab())
+watch(tab, (value) => {
+  try {
+    localStorage.setItem(TAB_KEY, value)
+  } catch {
+    // Archiviazione non disponibile (es. navigazione privata): resta per questa sessione.
+  }
+})
+const cellar = computed(() => tab.value === 'cantina')
 const year = ref(null)
 const month = ref(null)
 
@@ -36,7 +54,8 @@ watch(year, () => {
   if (month.value && !months.value.includes(month.value)) month.value = null
 })
 
-const filtersActive = computed(() => !!(query.value || type.value || year.value || month.value || cellar.value))
+// Anno e Mese valgono solo nel Diario: nella Cantina non contano come filtri attivi.
+const filtersActive = computed(() => !!(query.value || type.value || (!cellar.value && (year.value || month.value))))
 const filtered = computed(() =>
   filterBottles(bottles.value, {
     query: query.value,
@@ -50,13 +69,16 @@ const groups = computed(() => groupByMonth(filtered.value))
 // Etichette assaggiate (il diario); quelle da assaggiare si vedono solo con "In cantina".
 const tasted = computed(() => bottles.value.filter((b) => tastedDate(b) !== null))
 const anyInCellar = computed(() => bottles.value.some((b) => (b.cellarCount ?? 0) > 0 || tastedDate(b) === null))
+const totalInCellar = computed(() => bottles.value.reduce((n, b) => n + (b.cellarCount ?? 0), 0))
+
+// Stappa dalla riga della cantina: Annulla e, al primo stappo, "Com'è?".
+const { tastingFor, uncorkBottle, saveTasting, later } = useUncork()
 
 function resetFilters() {
   query.value = ''
   type.value = null
   year.value = null
   month.value = null
-  cellar.value = false
 }
 
 // --- Riepilogo ------------------------------------------------------------------------
@@ -117,6 +139,9 @@ const periodFilters = [
   },
 ]
 
+const tabClass = (on) =>
+  `min-h-11 rounded-full font-bold ${on ? 'bg-rame text-doga' : 'text-cenere'}`
+
 const chipBase = 'inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-full border px-4 text-sm font-bold'
 const chipOff = 'border-rame/30 text-cenere'
 </script>
@@ -127,6 +152,14 @@ const chipOff = 'border-rame/30 text-cenere'
     <h1 class="sr-only">Registro</h1>
 
     <template v-if="bottles.length > 0">
+      <div role="tablist" aria-label="Sezioni" class="mb-3 grid grid-cols-2 gap-1 rounded-full bg-doga p-1">
+        <button type="button" role="tab" :aria-selected="!cellar" :class="tabClass(!cellar)" @click="tab = 'diario'">
+          Diario
+        </button>
+        <button type="button" role="tab" :aria-selected="cellar" :class="tabClass(cellar)" @click="tab = 'cantina'">
+          Cantina · {{ totalInCellar }}
+        </button>
+      </div>
       <div class="relative">
         <svg
           viewBox="0 0 24 24"
@@ -143,8 +176,8 @@ const chipOff = 'border-rame/30 text-cenere'
         <input
           v-model="query"
           type="search"
-          aria-label="Cerca nome o produttore"
-          placeholder="Cerca nome o produttore"
+          aria-label="Cerca nome, produttore, aroma o abbinamento"
+          placeholder="Cerca nome, produttore, aroma…"
           class="min-h-11 w-full rounded-full border border-rame/30 bg-doga pl-10 pr-11 text-gesso"
         />
         <button
@@ -161,7 +194,7 @@ const chipOff = 'border-rame/30 text-cenere'
       <!-- Tutti i filtri in una riga sola, scorrevole: lascia lo schermo all'elenco. -->
       <div class="-mx-4 mt-3 flex items-center gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
         <!-- Interruttori: tocca Vino per filtrare, ritoccalo per tornare a tutte le bottiglie. -->
-        <div role="group" aria-label="Filtra per tipo e cantina" class="flex shrink-0 gap-2">
+        <div role="group" aria-label="Filtra per tipo" class="flex shrink-0 gap-2">
           <button
             type="button"
             :aria-pressed="type === 'wine'"
@@ -177,14 +210,6 @@ const chipOff = 'border-rame/30 text-cenere'
             @click="type = type === 'beer' ? null : 'beer'"
           >
             Birra
-          </button>
-          <button
-            type="button"
-            :aria-pressed="cellar"
-            :class="[chipBase, cellar ? 'border-rame bg-rame text-doga' : chipOff]"
-            @click="cellar = !cellar"
-          >
-            In cantina
           </button>
         </div>
         <span v-if="!cellar" class="h-6 w-px shrink-0 bg-rame/30" aria-hidden="true"></span>
@@ -238,13 +263,16 @@ const chipOff = 'border-rame/30 text-cenere'
     </div>
 
     <div v-else-if="filtered.length === 0 && cellar && !query && !type" class="mt-10 text-center">
-      <p class="text-cenere">Nessuna bottiglia in cantina.</p>
-      <p class="mx-auto mt-1 max-w-xs text-sm text-cenere">Registra una bottiglia con almeno 1 bottiglia in cantina per vederla qui.</p>
+      <p class="text-cenere">La cantina è vuota.</p>
+      <p class="mx-auto mt-1 max-w-xs text-sm text-cenere">Registra una bottiglia e indica quante ne metti in cantina.</p>
+      <RouterLink to="/nuova" class="mt-4 inline-flex min-h-11 items-center rounded-full bg-feccia px-5 font-bold text-botte">
+        + Metti in cantina
+      </RouterLink>
     </div>
 
     <div v-else-if="filtered.length === 0 && !filtersActive && anyInCellar" class="mt-10 text-center">
       <p class="text-cenere">Non hai ancora assaggiato le bottiglie in cantina.</p>
-      <button type="button" class="mt-2 min-h-11 font-bold text-rame" @click="cellar = true">Vedi la cantina</button>
+      <button type="button" class="mt-2 min-h-11 font-bold text-rame" @click="tab = 'cantina'">Vedi la cantina</button>
     </div>
 
     <div v-else-if="filtered.length === 0" class="mt-10 text-center">
@@ -255,7 +283,7 @@ const chipOff = 'border-rame/30 text-cenere'
     <!-- Cantina: un elenco unico dall'ultima entrata, senza mesi. -->
     <ul v-else-if="cellar" class="divide-y divide-rame/10">
       <li v-for="bottle in filtered" :key="bottle.id">
-        <BottleRow :bottle="bottle" :cover-url="coverUrls.get(bottle.id) ?? null" @share="sharing = $event" />
+        <BottleRow cellar :bottle="bottle" :cover-url="coverUrls.get(bottle.id) ?? null" @uncork="uncorkBottle" />
       </li>
     </ul>
 
@@ -274,6 +302,13 @@ const chipOff = 'border-rame/30 text-cenere'
       </section>
     </template>
 
+    <FirstTastingDialog
+      :open="!!tastingFor"
+      :name="tastingFor?.name ?? ''"
+      :type="tastingFor?.type ?? null"
+      @save="saveTasting"
+      @later="later"
+    />
     <ShareCardDialog v-if="sharing" :key="sharing.id" :bottle="sharing" @close="sharing = null" />
   </div>
 </template>

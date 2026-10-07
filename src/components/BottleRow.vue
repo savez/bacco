@@ -10,8 +10,11 @@ const props = defineProps({
   // la lista dal componente padre: con molte bottiglie, interrogare il DB da
   // ogni riga singolarmente sarebbe lento (SC-005).
   coverUrl: { type: String, default: null },
+  // Scheda Cantina (specs/003-cantina-viva-ui): numero grande e pulsante Stappa al posto di
+  // punteggio e Condividi.
+  cellar: { type: Boolean, default: false },
 })
-const emit = defineEmits(['share'])
+const emit = defineEmits(['share', 'uncork'])
 
 // Sagome come in BottleIcon.vue (viewBox 24×48).
 const SILHOUETTE = {
@@ -44,9 +47,15 @@ const subtitle = computed(() =>
       </span>
       <span class="min-w-0 flex-1">
         <span class="block truncate font-bold">{{ bottle.name }}</span>
-        <span class="block truncate text-sm text-cenere">{{ subtitle }}</span>
+        <span class="block truncate text-sm text-cenere">
+          <span v-if="cellar && untasted" class="font-bold text-luppolo">Da assaggiare · </span>{{ subtitle }}
+        </span>
       </span>
-      <span class="flex shrink-0 flex-col items-end gap-1">
+      <span v-if="cellar" class="flex shrink-0 flex-col items-end">
+        <span class="font-display text-2xl leading-none text-luppolo" aria-hidden="true">{{ inCellar }}</span>
+        <span class="sr-only">{{ inCellar }} in cantina</span>
+      </span>
+      <span v-else class="flex shrink-0 flex-col items-end gap-1">
         <span v-if="untasted" class="rounded-full border border-luppolo px-2 py-0.5 text-xs font-bold text-luppolo">Da assaggiare</span>
         <BottleRatingMark v-else :value="bottle.rating" :type="bottle.type" />
         <span v-if="inCellar > 0" class="text-xs font-bold text-rame">
@@ -56,7 +65,16 @@ const subtitle = computed(() =>
       </span>
     </RouterLink>
     <button
-      v-if="!untasted"
+      v-if="cellar && inCellar > 0"
+      type="button"
+      :aria-label="`Stappa una bottiglia di ${bottle.name}`"
+      class="min-h-11 shrink-0 rounded-full bg-feccia px-4 font-bold text-botte"
+      @click="emit('uncork', bottle)"
+    >
+      Stappa
+    </button>
+    <button
+      v-else-if="!cellar && !untasted"
       type="button"
       :aria-label="`Condividi ${bottle.name}`"
       class="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-cenere hover:text-gesso"
@@ -67,6 +85,6 @@ const subtitle = computed(() =>
       </svg>
     </button>
     <!-- Stessa larghezza del pulsante Condividi, così le righe restano allineate. -->
-    <span v-if="untasted" class="-mr-2 w-11 shrink-0" aria-hidden="true"></span>
+    <span v-else-if="!cellar" class="-mr-2 w-11 shrink-0" aria-hidden="true"></span>
   </div>
 </template>

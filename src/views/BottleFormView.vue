@@ -2,7 +2,8 @@
 import { reactive, ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TypeToggle from '../components/TypeToggle.vue'
-import BottleRating from '../components/BottleRating.vue'
+import TastingFields from '../components/TastingFields.vue'
+import { keepValidAromas } from '../lib/tastingTags.js'
 import PhotoPicker from '../components/PhotoPicker.vue'
 import PermissionHelp from '../components/PermissionHelp.vue'
 import { explainLocationError } from '../lib/permissions.js'
@@ -40,6 +41,8 @@ const form = reactive({
   subtype: '',
   appellation: '',
   rating: null,
+  aromaTags: [],
+  pairingTags: [],
   tasting: '',
   pairing: '',
   notes: '',
@@ -51,8 +54,38 @@ const form = reactive({
 // Cantina (specs/002-cellar-inventory): in creazione le bottiglie in cantina decidono. Con 0
 // la bevo subito (punteggio obbligatorio); con 1 o più vanno in cantina e punteggio e
 // analisi arrivano al primo stappo.
-const bottleCount = ref('0')
-const toCellar = computed(() => !isEdit && Number(bottleCount.value) >= 1)
+const bottleCount = ref(0)
+const toCellar = computed(() => !isEdit && bottleCount.value >= 1)
+function changeCount(delta) {
+  bottleCount.value = Math.min(999, Math.max(0, bottleCount.value + delta))
+}
+
+// Nuova bottiglia in 2 passi (specs/003-cantina-viva-ui): 1 = Cos'è, 2 = Cantina o assaggio.
+// La modifica mostra tutto su una pagina sola.
+const step = ref(1)
+const showStep1 = computed(() => isEdit || step.value === 1)
+const showStep2 = computed(() => isEdit || step.value === 2)
+const saveLabel = computed(() => {
+  if (isEdit) return 'Salva modifiche'
+  return toCellar.value ? `Metti in cantina (${bottleCount.value})` : 'Salva bevuta'
+})
+
+async function goNext() {
+  errors.value = {}
+  if (!form.type) errors.value.type = 'Scegli vino o birra.'
+  if (!form.name.trim()) errors.value.name = 'Scrivi il nome.'
+  if (Object.keys(errors.value).length > 0) {
+    await focusFirstError()
+    return
+  }
+  step.value = 2
+  window.scrollTo({ top: 0 })
+}
+
+function goBack() {
+  step.value = 1
+  window.scrollTo({ top: 0 })
+}
 // In modifica, un'etichetta mai stappata può ricevere il punteggio ma non lo richiede.
 const existingUntasted = ref(false)
 // Spiegazione del contrassegno di Stato (pulsante ⓘ accanto al campo).
@@ -107,6 +140,7 @@ watch(
     // una scritta a mano ("Altro") invece resta.
     if (previous && type !== previous && subtypesFor(previous).includes(form.subtype)) form.subtype = ''
     // La denominazione vale solo per il vino.
+    form.aromaTags = keepValidAromas(form.aromaTags, type)
     if (type !== 'wine') {
       form.appellation = ''
       form.stateSeal = ''
@@ -160,6 +194,8 @@ onMounted(async () => {
   form.abv = existing.abv != null ? String(existing.abv).replace('.', ',') : ''
   // Record precedenti alla migrazione v2 restano leggibili anche se non ancora riscritti.
   form.tasting = existing.tasting || ''
+  form.aromaTags = existing.aromaTags ?? []
+  form.pairingTags = existing.pairingTags ?? []
   existingUntasted.value = existing.tastedAt === null
   Object.assign(form, { consumedDate: toDateAndTime(existing.consumedAt).date, consumedTime: toDateAndTime(existing.consumedAt).time })
   if (existing.location) {
@@ -180,27 +216,26 @@ function setNow() {
 }
 
 async function focusFirstError() {
-  await nextTick()
   const firstKey = ['type', 'name', 'bottles', 'rating'].find((k) => errors.value[k])
-  fieldRefs.value[firstKey]?.focus?.()
+  // Un errore dei dati del passo 1 trovato al salvataggio riporta al passo 1.
+  if (!isEdit && (firstKey === 'type' || firstKey === 'name')) step.value = 1
+  await nextTick()
+  if (firstKey === 'rating') document.querySelector('[data-field="rating"]')?.focus()
+  else fieldRefs.value[firstKey]?.focus?.()
 }
 
 async function onSubmit({ allowDuplicate = false } = {}) {
   saving.value = true
   errors.value = {}
-  const count = Number(bottleCount.value)
-  if (!isEdit && (!Number.isInteger(count) || count < 0 || count > 999)) {
-    errors.value = { bottles: 'Indica da 0 a 999 bottiglie.' }
-    saving.value = false
-    await focusFirstError()
-    return
-  }
+  const count = bottleCount.value
   const payload = {
     ...form,
     vintage: form.vintage === '' ? null : Number(form.vintage),
     consumedAt: fromDateAndTime(form.consumedDate, form.consumedTime),
     location: location.value,
-    ...(toCellar.value ? { tastedAt: null, rating: null, tasting: '', pairing: '', cellarCount: count } : {}),
+    ...(toCellar.value
+      ? { tastedAt: null, rating: null, tasting: '', pairing: '', aromaTags: [], pairingTags: [], cellarCount: count }
+      : {}),
   }
   const addPhotos = photos.value.filter((p) => p.isNew).map((p) => ({ blob: p.blob, thumb: p.thumb }))
   const currentIds = new Set(photos.value.filter((p) => !p.isNew).map((p) => p.id))
@@ -280,20 +315,34 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
   <div v-else-if="!loading" :class="inSheet ? '' : 'pb-36'">
     <div class="flex min-h-11 items-center gap-2 p-4" :class="{ 'pr-14': inSheet }">
       <button v-if="!inSheet" type="button" aria-label="Chiudi" class="min-h-11 min-w-11 text-xl" @click="router.back()">✕</button>
-      <h1 class="font-display text-xl uppercase tracking-wide">
-        {{ isEdit ? 'Modifica bottiglia' : 'Nuova bottiglia' }}
-      </h1>
+      <div>
+        <p v-if="!isEdit" class="text-xs font-bold text-cenere">Passo {{ step }} di 2</p>
+        <h1 class="font-display text-xl uppercase tracking-wide">
+          {{ isEdit ? 'Modifica bottiglia' : step === 1 ? "Cos'è" : 'Cantina o assaggio' }}
+        </h1>
+      </div>
+    </div>
+    <div
+      v-if="!isEdit"
+      class="mx-4 mb-6 h-1 rounded-full bg-doga"
+      role="progressbar"
+      aria-label="Avanzamento"
+      :aria-valuenow="step"
+      aria-valuemin="1"
+      aria-valuemax="2"
+    >
+      <div class="h-1 rounded-full bg-feccia transition-all" :class="step === 1 ? 'w-1/2' : 'w-full'"></div>
     </div>
 
     <form id="bottle-form" class="space-y-8 px-4" @submit.prevent="onSubmit">
-      <fieldset>
+      <fieldset v-show="showStep1">
         <legend class="section-title">Foto</legend>
         <PhotoPicker v-model="photos" />
       </fieldset>
 
       <!-- Ordine del modulo: riconosco (foto, codice) → descrivo (cos'è) → decido (cantina o la
            bevo adesso) → assaggio → note → quando e dove → scheda tecnica. -->
-      <fieldset class="space-y-4">
+      <fieldset v-show="showStep1" class="space-y-4">
         <legend class="section-title">Cos'è</legend>
         <div>
           <p class="field-label">Tipo *</p>
@@ -463,59 +512,62 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
         </div>
       </fieldset>
 
-      <fieldset v-if="!isEdit">
+      <fieldset v-if="!isEdit && step === 2">
         <legend class="section-title">Cantina</legend>
-        <div>
-          <label for="bottles" class="field-label">Bottiglie in cantina</label>
-          <input
-            id="bottles"
-            :ref="setFieldRef('bottles')"
-            v-model="bottleCount"
-            type="number"
-            inputmode="numeric"
-            min="0"
-            max="999"
-            step="1"
-            aria-describedby="bottles-help"
-            :class="[inputClass, 'max-w-32']"
-            :aria-invalid="!!errors.bottles"
-          />
-          <p id="bottles-help" class="mt-1 text-sm text-cenere">
-            {{ toCellar ? 'Vanno in cantina: punteggio e analisi te li chiedo alla prima bottiglia stappata.' : '0 = la bevo adesso · 1 o più = la metto in cantina.' }}
+        <div class="rounded-2xl bg-doga p-4">
+          <p id="bottles-label" class="font-bold">Bottiglie in cantina</p>
+          <div class="mt-2 flex items-center justify-between">
+            <button
+              type="button"
+              aria-label="Una bottiglia in meno"
+              class="flex h-12 w-12 items-center justify-center rounded-full border border-rame/40 text-2xl"
+              :disabled="bottleCount === 0"
+              @click="changeCount(-1)"
+            >
+              −
+            </button>
+            <output
+              :ref="setFieldRef('bottles')"
+              tabindex="-1"
+              aria-labelledby="bottles-label"
+              aria-live="polite"
+              class="font-display text-5xl text-luppolo"
+            >
+              {{ bottleCount }}
+            </output>
+            <button
+              type="button"
+              aria-label="Una bottiglia in più"
+              class="flex h-12 w-12 items-center justify-center rounded-full border border-rame/40 text-2xl"
+              :disabled="bottleCount === 999"
+              @click="changeCount(1)"
+            >
+              +
+            </button>
+          </div>
+          <p class="mt-2 text-center text-sm text-cenere">
+            {{ toCellar ? 'Vanno in cantina: punteggio e analisi te li chiedo alla prima bottiglia stappata.' : '0 = la bevo adesso' }}
           </p>
-          <p v-if="errors.bottles" class="mt-1 text-sm text-feccia">{{ errors.bottles }}</p>
         </div>
       </fieldset>
 
       <!-- Con bottiglie in cantina l'assaggio arriva al primo stappo: il blocco sparisce intero. -->
-      <fieldset v-if="!toCellar" class="space-y-4">
+      <fieldset v-if="showStep2 && !toCellar">
         <legend class="section-title">Assaggio</legend>
-        <fieldset>
-          <legend class="field-label">{{ existingUntasted ? 'Punteggio' : 'Punteggio *' }}</legend>
-          <div :ref="setFieldRef('rating')" tabindex="-1">
-            <BottleRating v-model="form.rating" :type="form.type" :invalid="!!errors.rating" />
-          </div>
-        </fieldset>
-        <div>
-          <label for="tasting" class="field-label">Analisi organolettica personale</label>
-          <textarea
-            id="tasting"
-            v-model="form.tasting"
-            maxlength="1000"
-            rows="4"
-            placeholder="Colore, profumi, sapori, sensazioni. Es. rubino; ciliegia e viola; tannico, lungo."
-            class="mt-1 w-full rounded-md border border-rame/30 bg-doga px-3 py-2 text-gesso"
-            :aria-invalid="!!errors.tasting"
-          ></textarea>
-          <p v-if="errors.tasting" class="mt-1 text-sm text-feccia">{{ errors.tasting }}</p>
-        </div>
-        <div>
-          <label for="pairing" class="field-label">Con cosa l'ho mangiato</label>
-          <input id="pairing" v-model="form.pairing" type="text" maxlength="500" placeholder="Es. brasato, pizza margherita" :class="inputClass" />
-        </div>
+        <TastingFields
+          v-model:rating="form.rating"
+          v-model:aroma-tags="form.aromaTags"
+          v-model:pairing-tags="form.pairingTags"
+          v-model:tasting="form.tasting"
+          v-model:pairing="form.pairing"
+          :type="form.type"
+          :rating-required="!existingUntasted"
+          :errors="errors"
+        />
+        <p v-if="errors.rating" class="mt-1 text-sm text-feccia">{{ errors.rating }}</p>
       </fieldset>
 
-      <fieldset>
+      <fieldset v-show="showStep2">
         <legend class="section-title">Note</legend>
         <div>
           <label for="notes" class="sr-only">Note</label>
@@ -530,7 +582,7 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
         </div>
       </fieldset>
 
-      <fieldset class="space-y-4">
+      <fieldset v-show="showStep2" class="space-y-4">
         <legend class="section-title">{{ toCellar ? 'Registrata quando e dove' : 'Quando e dove' }}</legend>
         <div>
           <div class="grid grid-cols-[1fr_9rem] gap-3">
@@ -568,7 +620,7 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
         </div>
       </fieldset>
 
-      <fieldset>
+      <fieldset v-show="showStep2">
         <legend class="section-title">Scheda tecnica</legend>
         <label for="externalUrl" class="field-label">Link alla scheda tecnica o organolettica</label>
         <input
@@ -593,13 +645,31 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
       "
     >
       <button
-        type="submit"
-        form="bottle-form"
-        :disabled="saving"
-        class="min-h-11 w-full rounded-md bg-feccia px-4 font-bold text-botte shadow-lg disabled:opacity-60"
+        v-if="!isEdit && step === 1"
+        type="button"
+        class="min-h-12 w-full rounded-md bg-feccia px-4 font-bold text-botte shadow-lg"
+        @click="goNext"
       >
-        Salva bottiglia
+        Avanti
       </button>
+      <div v-else class="flex gap-2">
+        <button
+          v-if="!isEdit"
+          type="button"
+          class="min-h-12 rounded-md border border-rame/40 bg-botte px-4 font-bold shadow-lg"
+          @click="goBack"
+        >
+          Indietro
+        </button>
+        <button
+          type="submit"
+          form="bottle-form"
+          :disabled="saving"
+          class="min-h-12 flex-1 rounded-md bg-feccia px-4 font-bold text-botte shadow-lg disabled:opacity-60"
+        >
+          {{ saveLabel }}
+        </button>
+      </div>
     </div>
 
     <ConfirmDialog

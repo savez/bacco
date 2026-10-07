@@ -1,40 +1,18 @@
 <script setup>
 import { ref, computed } from 'vue'
 import QuantityDialog from './QuantityDialog.vue'
-import FirstTastingDialog from './FirstTastingDialog.vue'
-import { addToCellar, uncork, recordFirstTasting, undoMove, adjustCellar, listMoves } from '../db/cellar.js'
+import { addToCellar, adjustCellar, listMoves } from '../db/cellar.js'
+import { confirmWithUndo } from '../composables/useUncork.js'
 import { useLiveQuery } from '../composables/useLiveQuery.js'
 import { formatMove, formatDateTime } from '../lib/format.js'
-import { showBanner, dismissBanner } from '../composables/useBanner.js'
 
 // Sezione "Cantina" della scheda (specs/002-cellar-inventory/contracts/ui-cellar.md).
 const props = defineProps({
   bottle: { type: Object, required: true },
 })
 
-const BANNER_ID = 'cellar-op'
 const count = computed(() => props.bottle.cellarCount ?? 0)
 const bottlesLabel = (n) => `${n} ${n === 1 ? 'bottiglia' : 'bottiglie'}`
-
-/** Messaggio con "Annulla" per l'operazione appena fatta (FR-107). */
-function confirmWithUndo(message, operation) {
-  showBanner({
-    id: BANNER_ID,
-    message,
-    priority: 30,
-    timeout: 8000,
-    actions: [
-      {
-        label: 'Annulla',
-        onClick: async () => {
-          dismissBanner(BANNER_ID)
-          await undoMove(operation)
-          showBanner({ id: BANNER_ID, message: 'Operazione annullata', priority: 30 })
-        },
-      },
-    ],
-  })
-}
 
 // --- Aggiungi -----------------------------------------------------------------------
 const addOpen = ref(false)
@@ -48,20 +26,6 @@ async function onAdd(n) {
   } catch (err) {
     addError.value = err.message
   }
-}
-
-// --- Stappa -------------------------------------------------------------------------
-const tastingOpen = ref(false)
-
-async function onUncork() {
-  const operation = await uncork(props.bottle.id)
-  confirmWithUndo('Stappata 1 bottiglia', operation)
-  if (operation.needsTasting) tastingOpen.value = true
-}
-
-async function onTastingSave(input) {
-  await recordFirstTasting(props.bottle.id, input)
-  tastingOpen.value = false
 }
 
 // --- Correggi quantità ----------------------------------------------------------------
@@ -82,6 +46,13 @@ async function onAdjust(to) {
 // Il pannello è montato con `:key="bottle.id"`: l'id non cambia durante la sua vita.
 const moves = useLiveQuery(() => listMoves(props.bottle.id), [])
 
+// La barra fissa della scheda apre "Aggiungi" (specs/003-cantina-viva-ui): il dialogo resta qui.
+function openAdd() {
+  addError.value = ''
+  addOpen.value = true
+}
+defineExpose({ openAdd })
+
 const buttonClass = 'min-h-11 rounded-md border border-rame/30 px-4 py-2 font-bold'
 </script>
 
@@ -95,10 +66,6 @@ const buttonClass = 'min-h-11 rounded-md border border-rame/30 px-4 py-2 font-bo
     </div>
 
     <div class="mt-3 flex flex-wrap gap-2">
-      <button v-if="count > 0" type="button" class="min-h-11 rounded-md bg-feccia px-4 py-2 font-bold text-botte" @click="onUncork">
-        Stappa
-      </button>
-      <button type="button" :class="buttonClass" @click="addError = ''; addOpen = true">Aggiungi</button>
       <button type="button" :class="buttonClass" @click="adjustError = ''; adjustOpen = true">Correggi quantità</button>
     </div>
 
@@ -143,13 +110,6 @@ const buttonClass = 'min-h-11 rounded-md border border-rame/30 px-4 py-2 font-bo
       :error="adjustError"
       @confirm="onAdjust"
       @cancel="adjustOpen = false"
-    />
-    <FirstTastingDialog
-      :open="tastingOpen"
-      :name="bottle.name"
-      :type="bottle.type"
-      @save="onTastingSave"
-      @later="tastingOpen = false"
     />
   </section>
 </template>

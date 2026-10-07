@@ -47,7 +47,10 @@ export function filterBottles(bottles, { query, type, year, month, cellar = fals
       }
       if (!needle) return true
       return (
-        normalizeText(b.name).includes(needle) || normalizeText(b.producer ?? '').includes(needle)
+        normalizeText(b.name).includes(needle) ||
+        normalizeText(b.producer ?? '').includes(needle) ||
+        // Aromi e abbinamenti scelti a chip (specs/003-cantina-viva-ui).
+        [...(b.aromaTags ?? []), ...(b.pairingTags ?? [])].some((tag) => normalizeText(tag).includes(needle))
       )
     })
     .sort(cellar ? byCellarDesc : byTastedDesc)

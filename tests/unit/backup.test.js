@@ -297,3 +297,14 @@ describe('cantina nel backup (formatVersion 2)', () => {
     expect((await db.bottles.get(local.id)).cellarCount).toBe(6)
   })
 })
+
+describe('chip nel backup (SC-204)', () => {
+  it('esporta e reimporta aromi e abbinamenti identici', async () => {
+    const b = await createBottle({ name: 'Barolo', type: 'wine', rating: 4, aromaTags: ['Tannico', 'Fruttato'], pairingTags: ['Carne'] })
+    const file = new File([await buildBackupBlob()], 'backup.json', { type: 'application/json' })
+    await db.bottles.clear()
+    await db.cellarMoves.clear()
+    await importBackup(file, { makeThumbnail: fakeThumbnail })
+    expect(await db.bottles.get(b.id)).toMatchObject({ aromaTags: ['Fruttato', 'Tannico'], pairingTags: ['Carne'] })
+  })
+})
