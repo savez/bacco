@@ -26,6 +26,8 @@ const HEADER = [
   'in_cantina',
   'primo_assaggio',
   'contrassegno_di_stato',
+  'aromi',
+  'abbinamenti',
 ]
 
 function formatLocalDateTime(iso) {
@@ -83,6 +85,8 @@ export function buildCsv(bottles, photoCounts = {}) {
       bottle.cellarCount ?? 0,
       bottle.tastedAt ? formatLocalDateTime(bottle.tastedAt) : '',
       bottle.stateSeal ?? '',
+      (bottle.aromaTags ?? []).join(', '),
+      (bottle.pairingTags ?? []).join(', '),
     ]
     lines.push(row.map(csvField).join(';'))
   }

@@ -1,9 +1,10 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue'
-import BottleRating from './BottleRating.vue'
+import TastingFields from './TastingFields.vue'
 
-// Primo stappo di un'etichetta mai assaggiata (FR-109): punteggio obbligatorio per
-// salvare, analisi organolettica facoltativa. "Più tardi" la lascia da assaggiare.
+// Primo stappo di un'etichetta mai assaggiata (FR-204/209): punteggio obbligatorio per
+// salvare, chip di aromi e abbinamento e testi liberi come in tutti gli altri punti.
+// "Più tardi" la lascia da assaggiare.
 const props = defineProps({
   open: { type: Boolean, default: false },
   name: { type: String, required: true },
@@ -13,8 +14,11 @@ const emit = defineEmits(['save', 'later'])
 
 const dialogRef = ref(null)
 const rating = ref(null)
+const aromaTags = ref([])
+const pairingTags = ref([])
 const tasting = ref('')
-const invalid = ref(false)
+const pairing = ref('')
+const errors = ref({})
 
 watch(
   () => props.open,
@@ -22,8 +26,11 @@ watch(
     await nextTick()
     if (isOpen) {
       rating.value = null
+      aromaTags.value = []
+      pairingTags.value = []
       tasting.value = ''
-      invalid.value = false
+      pairing.value = ''
+      errors.value = {}
       dialogRef.value?.showModal()
     } else {
       dialogRef.value?.close()
@@ -33,10 +40,16 @@ watch(
 
 function onSave() {
   if (rating.value == null) {
-    invalid.value = true
+    errors.value = { rating: 'Scegli un punteggio da 1 a 5.' }
     return
   }
-  emit('save', { rating: rating.value, tasting: tasting.value })
+  emit('save', {
+    rating: rating.value,
+    aromaTags: aromaTags.value,
+    pairingTags: pairingTags.value,
+    tasting: tasting.value,
+    pairing: pairing.value,
+  })
 }
 
 function onDialogCancel(event) {
@@ -49,30 +62,26 @@ function onDialogCancel(event) {
   <dialog
     ref="dialogRef"
     aria-labelledby="tasting-title"
-    class="w-[calc(100%-2rem)] max-w-sm rounded-3xl border border-rame/30 bg-doga p-0 text-gesso shadow-2xl backdrop:bg-black/60"
+    class="w-[calc(100%-2rem)] max-w-md rounded-3xl border border-rame/30 bg-doga p-0 text-gesso shadow-2xl backdrop:bg-black/60"
     @cancel="onDialogCancel"
   >
-    <form class="p-5" @submit.prevent="onSave">
-      <h2 id="tasting-title" class="font-display text-2xl uppercase leading-none tracking-wide">Com'è?</h2>
-      <p class="mt-1 text-sm text-cenere">Primo assaggio di {{ name }}.</p>
-
-      <fieldset class="mt-4">
-        <legend class="text-sm font-bold">Punteggio *</legend>
-        <BottleRating v-model="rating" :type="type" :invalid="invalid" />
-        <p v-if="invalid" class="mt-1 text-sm text-feccia" role="alert">Scegli un punteggio da 1 a 5.</p>
-      </fieldset>
-
-      <label for="first-tasting" class="mt-4 block text-sm font-bold">Analisi organolettica personale</label>
-      <textarea
-        id="first-tasting"
-        v-model="tasting"
-        maxlength="1000"
-        rows="3"
-        placeholder="Colore, profumi, sapori, sensazioni."
-        class="mt-1 w-full rounded-md border border-rame/30 bg-botte px-3 py-2 text-gesso"
-      ></textarea>
-
-      <div class="mt-4 flex flex-col gap-2">
+    <form class="flex max-h-[85dvh] flex-col" @submit.prevent="onSave">
+      <div class="overflow-y-auto px-5 pt-5">
+        <h2 id="tasting-title" class="font-display text-2xl uppercase leading-none tracking-wide">Com'è?</h2>
+        <p class="mt-1 text-sm text-cenere">Primo assaggio di {{ name }}.</p>
+        <TastingFields
+          v-model:rating="rating"
+          v-model:aroma-tags="aromaTags"
+          v-model:pairing-tags="pairingTags"
+          v-model:tasting="tasting"
+          v-model:pairing="pairing"
+          class="mt-4 pb-2"
+          :type="type"
+          :errors="errors"
+        />
+        <p v-if="errors.rating" class="text-sm text-feccia" role="alert">{{ errors.rating }}</p>
+      </div>
+      <div class="flex flex-col gap-2 border-t border-rame/20 p-4">
         <button type="submit" class="min-h-12 rounded-full bg-feccia px-4 font-bold text-botte">Salva</button>
         <button type="button" class="min-h-12 rounded-full px-4 font-bold text-cenere" @click="emit('later')">Più tardi</button>
       </div>

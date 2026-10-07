@@ -165,3 +165,22 @@ describe('adjustCellar', () => {
     expect((await movesOf(bottle.id)).some((m) => m.type === 'adjust')).toBe(false)
   })
 })
+
+describe('primo assaggio con i chip', () => {
+  it('salva aromi, abbinamenti e testi, filtrati sui vocabolari', async () => {
+    const bottle = await inCellar(3)
+    await uncork(bottle.id)
+    const stored = await recordFirstTasting(bottle.id, {
+      rating: 4, tasting: 'viola', aromaTags: ['Tannico', 'Luppolato'], pairingTags: ['Carne', 'Sushi'], pairing: 'brasato',
+    })
+    expect(stored).toMatchObject({ rating: 4, tasting: 'viola', aromaTags: ['Tannico'], pairingTags: ['Carne'], pairing: 'brasato' })
+  })
+
+  it('annullare il primo stappo toglie anche chip e testi', async () => {
+    const bottle = await inCellar(3)
+    const op = await uncork(bottle.id)
+    await recordFirstTasting(bottle.id, { rating: 5, aromaTags: ['Fruttato'], pairingTags: ['Pizza'], pairing: 'margherita' })
+    await undoMove(op)
+    expect(await db.bottles.get(bottle.id)).toMatchObject({ rating: null, tastedAt: null, aromaTags: [], pairingTags: [], pairing: '' })
+  })
+})

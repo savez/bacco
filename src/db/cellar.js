@@ -2,6 +2,7 @@ import { liveQuery } from 'dexie'
 import { db } from './db.js'
 import { move } from './bottles.js'
 import { CELLAR_MAX } from '../lib/validate.js'
+import { PAIRINGS, keepValidAromas, normalizeTags } from '../lib/tastingTags.js'
 
 // Cantina personale (specs/002-cellar-inventory/data-model.md). Ogni operazione scrive il
 // movimento e la quantità dell'etichetta nella stessa transazione, così il registro resta
@@ -15,7 +16,8 @@ export class CellarError extends Error {
   }
 }
 
-const CELLAR_FIELDS = ['cellarCount', 'cellarUpdatedAt', 'rating', 'tasting', 'tastedAt', 'updatedAt']
+const CELLAR_FIELDS = ['cellarCount', 'cellarUpdatedAt', 'rating', 'tasting', 'tastedAt', 'updatedAt', 'aromaTags', 'pairingTags', 'pairing']
+const SNAPSHOT_DEFAULTS = { aromaTags: [], pairingTags: [], tasting: '', pairing: '' }
 
 async function getOrFail(id) {
   const bottle = await db.bottles.get(id)
@@ -23,7 +25,7 @@ async function getOrFail(id) {
   return bottle
 }
 
-const snapshotOf = (bottle) => Object.fromEntries(CELLAR_FIELDS.map((key) => [key, bottle[key] ?? null]))
+const snapshotOf = (bottle) => Object.fromEntries(CELLAR_FIELDS.map((key) => [key, bottle[key] ?? SNAPSHOT_DEFAULTS[key] ?? null]))
 
 /**
  * Mette in cantina `n` bottiglie in più (FR-102).
@@ -75,16 +77,24 @@ export async function uncork(id) {
 }
 
 /**
- * Primo assaggio: punteggio (obbligatorio) e analisi organolettica.
+ * Primo assaggio: punteggio (obbligatorio), chip di aromi e abbinamento e testi liberi.
  * @param {string} id
- * @param {{rating: number, tasting?: string}} input
+ * @param {{rating: number, tasting?: string, pairing?: string, aromaTags?: string[], pairingTags?: string[]}} input
  */
-export async function recordFirstTasting(id, { rating, tasting = '' }) {
+export async function recordFirstTasting(id, { rating, tasting = '', pairing = '', aromaTags = [], pairingTags = [] }) {
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new CellarError('Scegli un punteggio da 1 a 5.')
   return db.transaction('rw', db.bottles, async () => {
-    await getOrFail(id)
+    const bottle = await getOrFail(id)
     const now = new Date().toISOString()
-    await db.bottles.update(id, { rating, tasting: String(tasting).trim().slice(0, 1000), tastedAt: now, updatedAt: now })
+    await db.bottles.update(id, {
+      rating,
+      tasting: String(tasting).trim().slice(0, 1000),
+      pairing: String(pairing).trim().slice(0, 500),
+      aromaTags: keepValidAromas(aromaTags, bottle.type),
+      pairingTags: normalizeTags(pairingTags, PAIRINGS),
+      tastedAt: now,
+      updatedAt: now,
+    })
     return db.bottles.get(id)
   })
 }

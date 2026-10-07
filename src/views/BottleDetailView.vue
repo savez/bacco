@@ -7,6 +7,8 @@ import NotesView from '../components/NotesView.vue'
 import ShareCardDialog from '../components/ShareCardDialog.vue'
 import { getBottle, deleteBottle, liveBottle } from '../db/bottles.js'
 import CellarPanel from '../components/CellarPanel.vue'
+import FirstTastingDialog from '../components/FirstTastingDialog.vue'
+import { useUncork } from '../composables/useUncork.js'
 import { listPhotos, photoUrl, revokePhotoUrl } from '../db/photos.js'
 import { getRatingLevel } from '../lib/rating.js'
 import { formatDateTime, formatAbv, kindLabel } from '../lib/format.js'
@@ -21,6 +23,10 @@ const photos = ref([])
 const notFound = ref(false)
 const confirmOpen = ref(false)
 const shareOpen = ref(false)
+// Barra d'azione fissa (specs/003-cantina-viva-ui): Stappa usa lo stesso flusso della riga
+// della cantina, con Annulla e "Com'è?" al primo stappo.
+const { tastingFor, uncorkBottle, saveTasting, later } = useUncork()
+const cellarPanel = ref(null)
 
 function revokeAll() {
   for (const photo of photos.value) revokePhotoUrl(photo.url)
@@ -70,6 +76,9 @@ onBeforeUnmount(() => {
 
 // Etichetta in cantina mai stappata: niente punteggio, niente card da condividere.
 const untasted = computed(() => bottle.value?.tastedAt === null)
+const aromaTags = computed(() => bottle.value?.aromaTags ?? [])
+const pairingTags = computed(() => bottle.value?.pairingTags ?? [])
+const tagClass = 'rounded-full border border-rame/40 px-3 py-1 text-sm font-bold'
 const registeredOnly = computed(() => untasted.value || (bottle.value?.tastedAt && bottle.value.tastedAt !== bottle.value.consumedAt))
 const firstTastedLater = computed(() => !untasted.value && registeredOnly.value)
 const deleteMessage = computed(() =>
@@ -93,7 +102,7 @@ function onDeleteConfirmed() {
     <RouterLink to="/" class="mt-2 inline-block min-h-11 font-bold text-rame">Torna al registro</RouterLink>
   </div>
 
-  <div v-else-if="bottle" class="pb-6">
+  <div v-else-if="bottle">
     <div v-if="photos.length > 0" class="flex snap-x snap-mandatory gap-2 overflow-x-auto">
       <img
         v-for="(photo, i) in photos"
@@ -134,16 +143,26 @@ function onDeleteConfirmed() {
       </p>
       <p v-if="firstTastedLater" class="text-sm text-cenere">Primo assaggio: {{ formatDateTime(bottle.tastedAt) }}</p>
 
-      <CellarPanel :key="bottle.id" :bottle="bottle" />
+      <CellarPanel ref="cellarPanel" :key="bottle.id" :bottle="bottle" />
 
-      <dl v-if="bottle.tasting || bottle.pairing" class="mt-6 space-y-3">
-        <div v-if="bottle.tasting">
+      <dl v-if="bottle.tasting || bottle.pairing || aromaTags.length || pairingTags.length" class="mt-6 space-y-4">
+        <div v-if="bottle.tasting || aromaTags.length">
           <dt class="font-display text-sm uppercase tracking-wide text-cenere">Analisi organolettica personale</dt>
-          <dd class="whitespace-pre-line">{{ bottle.tasting }}</dd>
+          <dd>
+            <ul v-if="aromaTags.length" class="mt-1 flex flex-wrap gap-1.5" aria-label="Aromi">
+              <li v-for="tag in aromaTags" :key="tag" :class="tagClass">{{ tag }}</li>
+            </ul>
+            <p v-if="bottle.tasting" class="mt-2 whitespace-pre-line">{{ bottle.tasting }}</p>
+          </dd>
         </div>
-        <div v-if="bottle.pairing">
+        <div v-if="bottle.pairing || pairingTags.length">
           <dt class="font-display text-sm uppercase tracking-wide text-cenere">Con cosa l'ho mangiato</dt>
-          <dd>{{ bottle.pairing }}</dd>
+          <dd>
+            <ul v-if="pairingTags.length" class="mt-1 flex flex-wrap gap-1.5" aria-label="Abbinamenti">
+              <li v-for="tag in pairingTags" :key="tag" :class="tagClass">{{ tag }}</li>
+            </ul>
+            <p v-if="bottle.pairing" class="mt-2">{{ bottle.pairing }}</p>
+          </dd>
         </div>
       </dl>
 
@@ -178,14 +197,6 @@ function onDeleteConfirmed() {
           Modifica
         </RouterLink>
         <button
-          v-if="!untasted"
-          type="button"
-          class="min-h-11 rounded-md border border-rame/30 px-4 py-2 font-bold"
-          @click="shareOpen = true"
-        >
-          Condividi
-        </button>
-        <button
           type="button"
           class="min-h-11 rounded-md border border-feccia px-4 py-2 font-bold text-feccia"
           @click="confirmOpen = true"
@@ -195,6 +206,40 @@ function onDeleteConfirmed() {
       </div>
     </div>
 
+    <!-- Barra d'azione fissa in fondo al pannello: le azioni principali senza scorrere. -->
+    <div class="sticky bottom-0 z-10 mt-2 flex gap-2 border-t border-rame/20 bg-doga px-4 pb-4 pt-3">
+      <button
+        v-if="bottle.cellarCount > 0"
+        type="button"
+        class="min-h-12 flex-1 rounded-xl bg-feccia px-3 font-bold text-botte"
+        @click="uncorkBottle(bottle)"
+      >
+        Stappa
+      </button>
+      <button
+        type="button"
+        class="min-h-12 flex-1 rounded-xl border border-rame/40 px-3 font-bold"
+        @click="cellarPanel?.openAdd()"
+      >
+        Aggiungi
+      </button>
+      <button
+        v-if="!untasted"
+        type="button"
+        class="min-h-12 flex-1 rounded-xl border border-rame/40 px-3 font-bold"
+        @click="shareOpen = true"
+      >
+        Condividi
+      </button>
+    </div>
+
+    <FirstTastingDialog
+      :open="!!tastingFor"
+      :name="tastingFor?.name ?? ''"
+      :type="tastingFor?.type ?? null"
+      @save="saveTasting"
+      @later="later"
+    />
     <ShareCardDialog v-if="shareOpen" :bottle="bottle" @close="shareOpen = false" />
 
     <ConfirmDialog

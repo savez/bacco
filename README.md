@@ -29,7 +29,8 @@ foto, punteggio, analisi organolettica, abbinamento, luogo e ricordi. Funziona o
 
 ## Cosa fa
 
-- 🍾 **Registra una bottiglia in pochi tocchi**: nome, tipo e punteggio bastano, il resto è facoltativo.
+- 🍾 **Registra una bottiglia in due passi**: *Cos'è* (foto, tipo, nome…) e poi *Cantina o
+  assaggio*, con un contatore delle bottiglie che metti in cantina.
 - 📷 **Foto** scattate dall'app o scelte dalla galleria.
 - 🍇 **Scheda completa**: sottocategoria (Rosso, Bianco, IPA, Stout…), denominazione
   (DOCG, DOC, IGT, IGP), annata, gradazione, analisi organolettica, abbinamento, note.
@@ -37,9 +38,11 @@ foto, punteggio, analisi organolettica, abbinamento, luogo e ricordi. Funziona o
   (es. ADK007842971), da verificare con l'app ufficiale *Trust your wine* del Poligrafico.
 - ⭐ **Punteggio da 1 a 5** con le bottiglie al posto delle stelle e una descrizione per ogni livello.
 - 🗂️ **Registro** con ricerca e filtri per tipo, anno e mese.
-- 🍷 **Cantina personale**: indica quante bottiglie metti in cantina (0 = la bevi subito);
-  punteggio e analisi te li chiede al primo stappo. Filtro "In cantina", registro movimenti
-  (entrate, uscite, rettifiche) e "Correggi quantità".
+- 🍷 **Cantina personale**: Diario e Cantina sono due schede della Home; nella Cantina ogni
+  bottiglia ha il suo pulsante **Stappa**, e al primo stappo Bacco ti chiede com'è.
+  Registro movimenti (entrate, uscite, rettifiche) e "Correggi quantità".
+- 🏷️ **Note organolettiche a chip**: aromi diversi per vino e birra e abbinamenti da toccare,
+  più il testo libero; la ricerca trova anche "tannico" o "pizza".
 - 🗺️ **Mappa** dei luoghi dove hai bevuto (solo se acconsenti alla posizione).
 - 📤 **Card da condividere** sui social, in stile "ho bevuto".
 - 💾 **Backup** in JSON (con le foto) e export CSV per i fogli di calcolo, con promemoria ogni 30 giorni.
@@ -48,6 +51,7 @@ foto, punteggio, analisi organolettica, abbinamento, luogo e ricordi. Funziona o
 
 <p align="center">
   <img src="docs/screenshots/cantina-dark.png" alt="Filtro In cantina con bottiglie da assaggiare" width="32%" />
+  <img src="docs/screenshots/assaggio-dark.png" alt="Assaggio con punteggio e chip degli aromi" width="32%" />
   <img src="docs/screenshots/movimenti-dark.png" alt="Scheda con la cantina e il registro movimenti" width="32%" />
 </p>
 

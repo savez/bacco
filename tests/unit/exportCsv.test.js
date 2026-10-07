@@ -57,6 +57,8 @@ describe('buildCsv', () => {
       'in_cantina',
       'primo_assaggio',
       'contrassegno_di_stato',
+      'aromi',
+      'abbinamenti',
     ])
   })
 
@@ -137,5 +139,14 @@ describe('contrassegno di Stato', () => {
   it('esporta il seriale della fascetta', () => {
     const [row] = rows(buildCsv([bottle({ stateSeal: 'ADK007842971' })], {}))
     expect(row.contrassegno_di_stato).toBe('ADK007842971')
+  })
+})
+
+describe('colonne dei chip', () => {
+  it('aromi e abbinamenti separati da virgola', () => {
+    const csv = buildCsv([bottle({ aromaTags: ['Tannico', 'Speziato'], pairingTags: ['Carne'] })], {})
+    const header = csv.slice(1).split('\r\n')[0].split(';')
+    expect(header.slice(-2)).toEqual(['aromi', 'abbinamenti'])
+    expect(csv).toContain('Tannico, Speziato;Carne')
   })
 })

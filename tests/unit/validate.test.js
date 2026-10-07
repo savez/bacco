@@ -300,3 +300,25 @@ describe('contrassegno di Stato', () => {
     expect(validateBottle({ name: 'Tipopils', type: 'beer', rating: 4, stateSeal: 'ADK007842971' }).value.stateSeal).toBeNull()
   })
 })
+
+describe('chip di aromi e abbinamenti', () => {
+  const wine = () => ({ name: 'Barolo', type: 'wine', rating: 4 })
+
+  it('default: elenchi vuoti, anche per record senza i campi', () => {
+    const res = validateBottle(wine())
+    expect(res.value.aromaTags).toEqual([])
+    expect(res.value.pairingTags).toEqual([])
+  })
+
+  it('scarta voci sconosciute e doppioni senza errore', () => {
+    const res = validateBottle({ ...wine(), aromaTags: ['Tannico', 'Tannico', 'Inventato'], pairingTags: ['Pizza', 'Sushi'] })
+    expect(res.ok).toBe(true)
+    expect(res.value.aromaTags).toEqual(['Tannico'])
+    expect(res.value.pairingTags).toEqual(['Pizza'])
+  })
+
+  it('tiene solo gli aromi del tipo', () => {
+    const res = validateBottle({ name: 'Tipopils', type: 'beer', rating: 4, aromaTags: ['Tannico', 'Luppolato', 'Fresco'] })
+    expect(res.value.aromaTags).toEqual(['Luppolato', 'Fresco'])
+  })
+})

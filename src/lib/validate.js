@@ -3,6 +3,7 @@
 // backup (src/backup/importJson.js).
 
 import { APPELLATIONS } from './subtypes.js'
+import { PAIRINGS, keepValidAromas, normalizeTags } from './tastingTags.js'
 
 const NAME_MAX = 120
 const NOTES_MAX = 5000
@@ -123,6 +124,11 @@ export function validateBottle(input, { now = new Date() } = {}) {
     errors.tasting = `L'analisi organolettica può avere al massimo ${TASTING_MAX} caratteri.`
   }
   value.tasting = tasting
+
+  // Note organolettiche a chip (specs/003-cantina-viva-ui): solo voci dei vocabolari fissi;
+  // valori sconosciuti scartati senza errore (un backup futuro con voci nuove resta importabile).
+  value.aromaTags = keepValidAromas(data.aromaTags, data.type)
+  value.pairingTags = normalizeTags(data.pairingTags, PAIRINGS)
 
   const pairing = cleanText(data.pairing ?? '')
   if (pairing.length > PAIRING_MAX) {

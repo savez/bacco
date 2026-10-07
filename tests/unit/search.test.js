@@ -146,3 +146,18 @@ describe('etichette da assaggiare rimaste a 0 bottiglie', () => {
     expect(filterBottles(list, { cellar: true }).map((b) => b.name)).toEqual(['Mai assaggiato'])
   })
 })
+
+describe('ricerca su aromi e abbinamenti', () => {
+  const list = [
+    bottle({ name: 'Barolo', aromaTags: ['Tannico', 'Speziato'], pairingTags: ['Carne'] }),
+    bottle({ name: 'Tipopils', type: 'beer', aromaTags: ['Luppolato'], pairingTags: ['Pizza'] }),
+  ]
+  it('trova le bottiglie per aroma o abbinamento, senza badare a maiuscole', () => {
+    expect(filterBottles(list, { query: 'tannico' }).map((b) => b.name)).toEqual(['Barolo'])
+    expect(filterBottles(list, { query: 'PIZZA' }).map((b) => b.name)).toEqual(['Tipopils'])
+  })
+  it('anche nella cantina', () => {
+    const cellar = list.map((b) => ({ ...b, cellarCount: 2 }))
+    expect(filterBottles(cellar, { query: 'carne', cellar: true }).map((b) => b.name)).toEqual(['Barolo'])
+  })
+})
