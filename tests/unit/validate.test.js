@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateBottle, isValidBarcode, isHttpsUrl, isValidGtinChecksum } from '../../src/lib/validate.js'
+import { validateBottle, validateMove, isValidBarcode, isHttpsUrl, isValidGtinChecksum } from '../../src/lib/validate.js'
 
 const base = () => ({
   name: 'Barolo Cannubi',
@@ -226,5 +226,68 @@ describe('isValidGtinChecksum', () => {
   it('segnala cifre di controllo sbagliate o lunghezze non GTIN', () => {
     expect(isValidGtinChecksum('4006381333932')).toBe(false)
     expect(isValidGtinChecksum('12345678901')).toBe(false)
+  })
+})
+
+describe('campi della cantina', () => {
+  it('bevuta subito: tastedAt = consumedAt, niente cantina', () => {
+    const res = validateBottle({ ...base(), consumedAt: '2026-10-01T20:00:00.000Z' })
+    expect(res.ok).toBe(true)
+    expect(res.value).toMatchObject({ tastedAt: '2026-10-01T20:00:00.000Z', cellarCount: 0, cellarUpdatedAt: null })
+  })
+
+  it('da assaggiare: punteggio non richiesto e azzerato', () => {
+    const res = validateBottle({ name: 'Barolo', type: 'wine', tastedAt: null, rating: '', cellarCount: 6 })
+    expect(res.ok).toBe(true)
+    expect(res.value).toMatchObject({ rating: null, tastedAt: null, cellarCount: 6 })
+  })
+
+  it('assaggiata senza punteggio: errore', () => {
+    const res = validateBottle({ name: 'Barolo', type: 'wine', rating: null })
+    expect(res.ok).toBe(false)
+    expect(res.errors.rating).toBeTruthy()
+  })
+
+  it('bottiglie in cantina: intero da 0 a 999', () => {
+    for (const bad of [-1, 1000, 2.5, 'tante']) {
+      expect(validateBottle({ ...base(), cellarCount: bad }).errors?.cellarCount).toBeTruthy()
+    }
+    expect(validateBottle({ ...base(), cellarCount: 999 }).ok).toBe(true)
+  })
+
+  it('date della cantina: ISO o null', () => {
+    expect(validateBottle({ ...base(), tastedAt: 'ieri' }).errors?.tastedAt).toBeTruthy()
+    expect(validateBottle({ ...base(), cellarUpdatedAt: 'ieri' }).errors?.cellarUpdatedAt).toBeTruthy()
+    const ok = validateBottle({ ...base(), cellarUpdatedAt: '2026-10-01T20:00:00.000Z' })
+    expect(ok.value.cellarUpdatedAt).toBe('2026-10-01T20:00:00.000Z')
+  })
+})
+
+describe('validateMove', () => {
+  const at = '2026-10-01T20:00:00.000Z'
+  const id = '11111111-1111-4111-8111-111111111111'
+  const bottleId = '22222222-2222-4222-8222-222222222222'
+
+  it('accetta i quattro tipi con le loro quantità', () => {
+    expect(validateMove({ id, bottleId, type: 'first', at }).ok).toBe(true)
+    expect(validateMove({ id, bottleId, type: 'in', qty: 6, at }).ok).toBe(true)
+    expect(validateMove({ id, bottleId, type: 'out', qty: 1, at }).ok).toBe(true)
+    expect(validateMove({ id, bottleId, type: 'adjust', from: 4, to: 3, at }).ok).toBe(true)
+  })
+
+  it('normalizza i campi non usati a null', () => {
+    expect(validateMove({ id, bottleId, type: 'in', qty: 2, from: 9, at }).value).toEqual({
+      id, bottleId, type: 'in', qty: 2, from: null, to: null, at,
+    })
+  })
+
+  it('rifiuta movimenti non validi', () => {
+    expect(validateMove({ id, bottleId, type: 'gift', at }).ok).toBe(false)
+    expect(validateMove({ id, bottleId, type: 'in', qty: 0, at }).ok).toBe(false)
+    expect(validateMove({ id, bottleId, type: 'in', qty: 1000, at }).ok).toBe(false)
+    expect(validateMove({ id, bottleId, type: 'out', qty: 2, at }).ok).toBe(false)
+    expect(validateMove({ id, bottleId, type: 'adjust', from: 4, to: -1, at }).ok).toBe(false)
+    expect(validateMove({ id, bottleId, type: 'first', at: 'ieri' }).ok).toBe(false)
+    expect(validateMove({ id: 'x', bottleId, type: 'first', at }).ok).toBe(false)
   })
 })

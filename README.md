@@ -34,11 +34,19 @@ foto, punteggio, analisi organolettica, abbinamento, luogo e ricordi. Funziona o
   (DOCG, DOC, IGT, IGP), annata, gradazione, analisi organolettica, abbinamento, note.
 - ⭐ **Punteggio da 1 a 5** con le bottiglie al posto delle stelle e una descrizione per ogni livello.
 - 🗂️ **Registro** con ricerca e filtri per tipo, anno e mese.
+- 🍷 **Cantina personale**: registra una bottiglia con 2 o più bottiglie e va in cantina;
+  punteggio e analisi te li chiede al primo stappo. Filtro "In cantina", registro movimenti
+  (entrate, uscite, rettifiche) e "Correggi quantità".
 - 🗺️ **Mappa** dei luoghi dove hai bevuto (solo se acconsenti alla posizione).
 - 📤 **Card da condividere** sui social, in stile "ho bevuto".
 - 💾 **Backup** in JSON (con le foto) e export CSV per i fogli di calcolo, con promemoria ogni 30 giorni.
 - 📱 **Installabile** sulla schermata Home e utilizzabile offline.
 - 🌗 **Tema chiaro e scuro**, accessibile (WCAG AA), pensato prima di tutto per il telefono.
+
+<p align="center">
+  <img src="docs/screenshots/cantina-dark.png" alt="Filtro In cantina con bottiglie da assaggiare" width="32%" />
+  <img src="docs/screenshots/movimenti-dark.png" alt="Scheda con la cantina e il registro movimenti" width="32%" />
+</p>
 
 ## Privacy
 

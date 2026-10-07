@@ -54,6 +54,8 @@ describe('buildCsv', () => {
       'latitudine',
       'longitudine',
       'numero_foto',
+      'in_cantina',
+      'primo_assaggio',
     ])
   })
 
@@ -106,5 +108,26 @@ describe('buildCsv', () => {
     expect(row.gradazione).toBe('13.5')
     expect(row.analisi_organolettica).toBe('viola, tannico')
     expect(row.abbinamento).toBe('brasato')
+  })
+})
+
+describe('colonne della cantina', () => {
+  it('etichetta assaggiata: bottiglie in cantina e data del primo assaggio', () => {
+    const [row] = rows(buildCsv([bottle({ cellarCount: 3, tastedAt: '2026-10-07T18:00:00.000Z' })], {}))
+    expect(row.in_cantina).toBe('3')
+    expect(row.primo_assaggio).toBe(row.data_consumo)
+  })
+
+  it('etichetta da assaggiare: punteggio e primo assaggio vuoti', () => {
+    const [row] = rows(buildCsv([bottle({ rating: null, tastedAt: null, cellarCount: 6 })], {}))
+    expect(row.punteggio).toBe('')
+    expect(row.punteggio_etichetta).toBe('')
+    expect(row.primo_assaggio).toBe('')
+    expect(row.in_cantina).toBe('6')
+  })
+
+  it('record senza campi della cantina: 0 in cantina', () => {
+    const [row] = rows(buildCsv([bottle()], {}))
+    expect(row.in_cantina).toBe('0')
   })
 })

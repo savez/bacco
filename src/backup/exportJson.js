@@ -21,7 +21,7 @@ async function blobToBase64(blob) {
  */
 export async function buildBackupBlob() {
   const parts = [
-    `{"app":"bacco","formatVersion":1,"exportedAt":${JSON.stringify(new Date().toISOString())},"bottles":[`,
+    `{"app":"bacco","formatVersion":2,"exportedAt":${JSON.stringify(new Date().toISOString())},"bottles":[`,
   ]
   const bottles = await db.bottles.toArray()
   let first = true
@@ -41,7 +41,8 @@ export async function buildBackupBlob() {
     parts.push(first ? entry : `,${entry}`)
     first = false
   }
-  parts.push(']}')
+  // Cantina (formatVersion 2): registro movimenti di tutte le etichette.
+  parts.push('],"cellarMoves":', JSON.stringify(await db.cellarMoves.toArray()), '}')
   return new Blob(parts, { type: 'application/json' })
 }
 

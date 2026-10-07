@@ -6,9 +6,12 @@ const props = defineProps({
   title: { type: String, required: true },
   message: { type: String, required: true },
   confirmLabel: { type: String, default: 'Conferma' },
+  cancelLabel: { type: String, default: 'Annulla' },
+  // Quando il secondo pulsante non è "annulla" (es. "Crea nuova"), Esc chiude e basta.
+  escapeDismisses: { type: Boolean, default: false },
   danger: { type: Boolean, default: false },
 })
-const emit = defineEmits(['confirm', 'cancel'])
+const emit = defineEmits(['confirm', 'cancel', 'dismiss'])
 
 const dialogRef = ref(null)
 const cancelRef = ref(null)
@@ -37,7 +40,8 @@ function onConfirm() {
 function onDialogCancel(event) {
   // Evento nativo "cancel" generato da Esc: trattato come annullamento.
   event.preventDefault()
-  onCancel()
+  if (props.escapeDismisses) emit('dismiss')
+  else onCancel()
 }
 </script>
 
@@ -61,7 +65,7 @@ function onDialogCancel(event) {
           class="min-h-11 rounded-md px-3 text-sm font-bold text-cenere"
           @click="onCancel"
         >
-          Annulla
+          {{ cancelLabel }}
         </button>
         <button
           type="button"

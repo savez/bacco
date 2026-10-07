@@ -73,3 +73,15 @@ export function fromDateAndTime(date, time) {
   if (!date) return new Date().toISOString()
   return new Date(`${date}T${time || '12:00'}`).toISOString()
 }
+
+/**
+ * Riga del registro movimenti della cantina (specs/002-cellar-inventory).
+ * @param {{type: 'first'|'in'|'out'|'adjust', qty?: number|null, from?: number|null, to?: number|null}} move
+ */
+export function formatMove({ type, qty, from, to }) {
+  const bottles = (n) => `${n} ${n === 1 ? 'bottiglia' : 'bottiglie'}`
+  if (type === 'in') return `Entrata · ${bottles(qty)}`
+  if (type === 'out') return `Uscita · ${bottles(qty ?? 1)}`
+  if (type === 'adjust') return `Rettifica · da ${from} a ${to}`
+  return 'Prima registrazione'
+}

@@ -12,6 +12,13 @@ const PAIRING_MAX = 500
 const ABV_MAX = 70
 const URL_MAX = 2048
 const FUTURE_TOLERANCE_MS = 5 * 60 * 1000
+// Cantina (specs/002-cellar-inventory): bottiglie in casa per etichetta.
+export const CELLAR_MAX = 999
+const MOVE_TYPES = ['first', 'in', 'out', 'adjust']
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const isIsoDate = (value) => typeof value === 'string' && !Number.isNaN(new Date(value).getTime())
+const isCellarQty = (value, min) => Number.isInteger(value) && value >= min && value <= CELLAR_MAX
 
 /** @param {string} code */
 export function isValidBarcode(code) {
@@ -148,11 +155,18 @@ export function validateBottle(input, { now = new Date() } = {}) {
     value.vintage = vintage
   }
 
-  const rating = Number(data.rating)
-  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-    errors.rating = 'Scegli un punteggio da 1 a 5.'
+  // Un'etichetta "da assaggiare" (tastedAt === null, in cantina e mai stappata) non ha
+  // ancora punteggio: lo riceve al primo stappo. Tutte le altre lo richiedono.
+  const untasted = data.tastedAt === null
+  if (untasted) {
+    value.rating = null
+  } else {
+    const rating = Number(data.rating)
+    if (data.rating === null || data.rating === '' || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+      errors.rating = 'Scegli un punteggio da 1 a 5.'
+    }
+    value.rating = rating
   }
-  value.rating = rating
 
   const consumedAtRaw = data.consumedAt ?? now.toISOString()
   const consumedAtDate = new Date(consumedAtRaw)
@@ -162,6 +176,31 @@ export function validateBottle(input, { now = new Date() } = {}) {
     errors.consumedAt = 'La data non può essere nel futuro.'
   }
   value.consumedAt = consumedAtDate.toISOString()
+
+  // Primo assaggio: per una bevuta subito coincide con "quando" (consumedAt).
+  if (untasted) {
+    value.tastedAt = null
+  } else if (data.tastedAt === undefined) {
+    value.tastedAt = value.consumedAt
+  } else if (!isIsoDate(data.tastedAt)) {
+    errors.tastedAt = 'Data del primo assaggio non valida.'
+  } else {
+    value.tastedAt = new Date(data.tastedAt).toISOString()
+  }
+
+  const cellarCount = data.cellarCount ?? 0
+  if (!isCellarQty(cellarCount, 0)) {
+    errors.cellarCount = `Le bottiglie in cantina devono essere tra 0 e ${CELLAR_MAX}.`
+  }
+  value.cellarCount = cellarCount
+
+  if (data.cellarUpdatedAt === null || data.cellarUpdatedAt === undefined) {
+    value.cellarUpdatedAt = null
+  } else if (!isIsoDate(data.cellarUpdatedAt)) {
+    errors.cellarUpdatedAt = 'Data della cantina non valida.'
+  } else {
+    value.cellarUpdatedAt = new Date(data.cellarUpdatedAt).toISOString()
+  }
 
   const notes = cleanText(data.notes ?? '')
   if (notes.length > NOTES_MAX) {
@@ -216,4 +255,36 @@ export function validateBottle(input, { now = new Date() } = {}) {
     return { ok: false, errors }
   }
   return { ok: true, value }
+}
+
+/**
+ * Movimento di cantina (specs/002-cellar-inventory/data-model.md). Usato dall'import del
+ * backup: ogni movimento del file è validato prima di scrivere.
+ * @param {object} data
+ * @returns {{ok: true, value: object} | {ok: false, errors: Record<string,string>}}
+ */
+export function validateMove(data) {
+  const errors = {}
+  const value = { id: data?.id, bottleId: data?.bottleId, type: data?.type, qty: null, from: null, to: null, at: data?.at }
+
+  if (typeof value.id !== 'string' || !UUID_RE.test(value.id)) errors.id = 'Identificativo non valido.'
+  if (typeof value.bottleId !== 'string' || !UUID_RE.test(value.bottleId)) errors.bottleId = 'Etichetta non valida.'
+  if (!MOVE_TYPES.includes(value.type)) errors.type = 'Tipo di movimento non valido.'
+  if (!isIsoDate(value.at)) errors.at = 'Data non valida.'
+
+  if (value.type === 'in') {
+    if (!isCellarQty(data.qty, 1)) errors.qty = `Le bottiglie aggiunte devono essere tra 1 e ${CELLAR_MAX}.`
+    value.qty = data.qty
+  } else if (value.type === 'out') {
+    if (data.qty !== 1) errors.qty = 'Si stappa una bottiglia alla volta.'
+    value.qty = 1
+  } else if (value.type === 'adjust') {
+    if (!isCellarQty(data.from, 0) || !isCellarQty(data.to, 0)) {
+      errors.adjust = `La rettifica deve andare da 0 a ${CELLAR_MAX} bottiglie.`
+    }
+    value.from = data.from
+    value.to = data.to
+  }
+
+  return Object.keys(errors).length > 0 ? { ok: false, errors } : { ok: true, value }
 }

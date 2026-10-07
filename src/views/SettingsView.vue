@@ -142,6 +142,7 @@ async function onSecondConfirm() {
   deleteSecondConfirmOpen.value = false
   await db.bottles.clear()
   await db.photos.clear()
+  await db.cellarMoves.clear()
   await db.settings.clear()
   try {
     localStorage.clear()

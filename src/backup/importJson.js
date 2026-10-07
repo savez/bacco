@@ -1,8 +1,10 @@
 import { db } from '../db/db.js'
-import { validateBottle } from '../lib/validate.js'
+import { validateBottle, validateMove } from '../lib/validate.js'
+import { move } from '../db/bottles.js'
 
 const MAX_SIZE = 300 * 1024 * 1024
-const SUPPORTED_FORMAT_VERSION = 1
+// v1: solo bottiglie (Bacco 1.0); v2: anche cantina e movimenti (specs/002-cellar-inventory).
+const SUPPORTED_FORMAT_VERSIONS = [1, 2]
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const BAD_FORMAT_MESSAGE = 'Il file non è un backup di Bacco. Scegli un file .json esportato da Bacco.'
@@ -65,7 +67,7 @@ export async function importBackup(file, { makeThumbnail } = {}) {
   if (!data || data.app !== 'bacco' || !Array.isArray(data.bottles)) {
     throw new Error(BAD_FORMAT_MESSAGE)
   }
-  if (data.formatVersion !== SUPPORTED_FORMAT_VERSION) {
+  if (!SUPPORTED_FORMAT_VERSIONS.includes(data.formatVersion)) {
     throw new Error("Backup creato da una versione più recente di Bacco. Aggiorna l'app e riprova.")
   }
 
@@ -97,6 +99,27 @@ export async function importBackup(file, { makeThumbnail } = {}) {
     }
   })
 
+  // Movimenti di cantina, validati come le bottiglie. Un backup v1 non li ha: ogni
+  // bottiglia riceve la sola "prima registrazione", come nella migrazione del DB v3.
+  const bottleIds = new Set(validated.map((v) => v.bottle.id))
+  const movesByBottle = new Map(validated.map((v) => [v.bottle.id, []]))
+  if (data.formatVersion === 1) {
+    for (const { bottle } of validated) movesByBottle.get(bottle.id).push(move(bottle.id, 'first', { at: bottle.consumedAt }))
+  } else {
+    const moves = Array.isArray(data.cellarMoves) ? data.cellarMoves : []
+    moves.forEach((entry, index) => {
+      const result = validateMove(entry)
+      if (!result.ok) {
+        const [field, message] = Object.entries(result.errors)[0]
+        throw new Error(`Movimento ${index + 1}, campo "${field}": ${message}`)
+      }
+      if (!bottleIds.has(result.value.bottleId)) {
+        throw new Error(`Movimento ${index + 1}: si riferisce a una bottiglia che non è nel backup.`)
+      }
+      movesByBottle.get(result.value.bottleId).push(result.value)
+    })
+  }
+
   // Fase 1 (fuori dalla transazione): decide cosa aggiungere/aggiornare/lasciare
   // invariato, e prepara in anticipo solo le foto che verranno davvero scritte.
   const ids = validated.map((v) => v.bottle.id)
@@ -120,13 +143,18 @@ export async function importBackup(file, { makeThumbnail } = {}) {
   }
 
   // Fase 2: transazione Dexie pura (solo put/delete), senza altri await in mezzo.
-  await db.transaction('rw', db.bottles, db.photos, async () => {
+  // I movimenti seguono il record che vince l'unione: così la quantità resta coerente con
+  // il registro (contracts/backup-format.md di specs/002-cellar-inventory).
+  await db.transaction('rw', db.bottles, db.photos, db.cellarMoves, async () => {
     for (const { action, bottle, photoRows } of toWrite) {
       if (action === 'update') {
         await db.photos.where('bottleId').equals(bottle.id).delete()
+        await db.cellarMoves.where('bottleId').equals(bottle.id).delete()
       }
       await db.bottles.put(bottle)
       if (photoRows.length > 0) await db.photos.bulkPut(photoRows)
+      const moves = movesByBottle.get(bottle.id)
+      if (moves.length > 0) await db.cellarMoves.bulkPut(moves)
     }
   })
 

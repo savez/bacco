@@ -1,11 +1,12 @@
 <script setup>
-import { ref, watch, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import BottleRatingMark from '../components/BottleRatingMark.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import NotesView from '../components/NotesView.vue'
 import ShareCardDialog from '../components/ShareCardDialog.vue'
-import { getBottle, deleteBottle } from '../db/bottles.js'
+import { getBottle, deleteBottle, liveBottle } from '../db/bottles.js'
+import CellarPanel from '../components/CellarPanel.vue'
 import { listPhotos, photoUrl, revokePhotoUrl } from '../db/photos.js'
 import { getRatingLevel } from '../lib/rating.js'
 import { formatDateTime, formatAbv, kindLabel } from '../lib/format.js'
@@ -30,11 +31,14 @@ function revokeAll() {
 // coda infinita). `requestId` scarta un risultato arrivato in ritardo se l'utente
 // è già passato a un'altra bottiglia prima che la richiesta precedente finisse.
 let requestId = 0
+let subscription = null
 
 watch(
   () => props.id,
   async (id) => {
     const thisRequest = ++requestId
+    subscription?.unsubscribe()
+    subscription = null
     revokeAll()
     notFound.value = false
     bottle.value = null
@@ -47,6 +51,10 @@ watch(
       return
     }
     bottle.value = found
+    // Da qui la scheda segue l'etichetta nel DB (cantina, primo assaggio, annullamenti).
+    subscription = liveBottle(id).subscribe((current) => {
+      if (thisRequest === requestId && current) bottle.value = current
+    })
 
     const stored = await listPhotos(id)
     if (thisRequest !== requestId) return
@@ -55,7 +63,20 @@ watch(
   { immediate: true },
 )
 
-onBeforeUnmount(revokeAll)
+onBeforeUnmount(() => {
+  subscription?.unsubscribe()
+  revokeAll()
+})
+
+// Etichetta in cantina mai stappata: niente punteggio, niente card da condividere.
+const untasted = computed(() => bottle.value?.tastedAt === null)
+const registeredOnly = computed(() => untasted.value || (bottle.value?.tastedAt && bottle.value.tastedAt !== bottle.value.consumedAt))
+const firstTastedLater = computed(() => !untasted.value && registeredOnly.value)
+const deleteMessage = computed(() =>
+  bottle.value?.cellarCount > 0
+    ? `Eliminare questa etichetta? Hai ancora ${bottle.value.cellarCount} ${bottle.value.cellarCount === 1 ? 'bottiglia' : 'bottiglie'} in cantina: si perdono anche le foto e il registro movimenti.`
+    : 'Eliminare questa bottiglia? Anche le foto e il registro movimenti verranno eliminati.',
+)
 
 function onDeleteConfirmed() {
   confirmOpen.value = false
@@ -83,18 +104,23 @@ function onDeleteConfirmed() {
       />
     </div>
 
-    <!-- Margine a destra: lascia spazio al pulsante di chiusura del pannello. -->
-    <div class="p-4" :class="{ 'pr-14': photos.length === 0 }">
-      <p class="text-sm font-bold uppercase text-cenere">
-        {{ kindLabel(bottle) }}
-      </p>
-      <h1 class="font-display text-3xl">{{ bottle.name }}</h1>
+    <div class="p-4">
+      <!-- Margine a destra solo sull'intestazione: lascia spazio al pulsante di chiusura. -->
+      <div :class="{ 'pr-12': photos.length === 0 }">
+        <p class="text-sm font-bold uppercase text-cenere">
+          {{ kindLabel(bottle) }}
+        </p>
+        <h1 class="font-display text-3xl">{{ bottle.name }}</h1>
+      </div>
       <p v-if="bottle.producer || bottle.vintage" class="font-display text-xl text-cenere">
         {{ [bottle.producer, bottle.vintage].filter(Boolean).join(' · ') }}
       </p>
       <p v-if="bottle.abv != null" class="mt-1 text-sm font-bold text-cenere">{{ formatAbv(bottle.abv) }}</p>
 
-      <div class="mt-4 flex items-center gap-3">
+      <p v-if="untasted" class="mt-4 inline-flex rounded-full border border-luppolo px-3 py-1 text-sm font-bold text-luppolo">
+        Da assaggiare
+      </p>
+      <div v-else class="mt-4 flex items-center gap-3">
         <BottleRatingMark :value="bottle.rating" :type="bottle.type" size="md" />
         <div>
           <p class="font-bold">{{ getRatingLevel(bottle.rating)?.label }}</p>
@@ -102,7 +128,13 @@ function onDeleteConfirmed() {
         </div>
       </div>
 
-      <p class="mt-4 text-sm text-cenere">{{ formatDateTime(bottle.consumedAt) }}</p>
+      <p class="mt-4 text-sm text-cenere">
+        <!-- "Quando" è la registrazione se l'etichetta è entrata in cantina senza berla. -->
+        <template v-if="registeredOnly">Registrata il </template>{{ formatDateTime(bottle.consumedAt) }}
+      </p>
+      <p v-if="firstTastedLater" class="text-sm text-cenere">Primo assaggio: {{ formatDateTime(bottle.tastedAt) }}</p>
+
+      <CellarPanel :key="bottle.id" :bottle="bottle" />
 
       <dl v-if="bottle.tasting || bottle.pairing" class="mt-6 space-y-3">
         <div v-if="bottle.tasting">
@@ -122,7 +154,7 @@ function onDeleteConfirmed() {
 
       <p v-if="bottle.barcode" class="mt-2 text-sm text-cenere">Codice a barre: {{ bottle.barcode }}</p>
 
-      <p v-if="bottle.location" class="mt-2 text-sm text-cenere">
+      <p v-if="bottle.location && !untasted" class="mt-2 text-sm text-cenere">
         Luogo:
         <RouterLink :to="`/mappa?bottiglia=${bottle.id}`" class="font-bold text-rame">
           Vedi sulla mappa
@@ -143,6 +175,7 @@ function onDeleteConfirmed() {
           Modifica
         </RouterLink>
         <button
+          v-if="!untasted"
           type="button"
           class="min-h-11 rounded-md border border-rame/30 px-4 py-2 font-bold"
           @click="shareOpen = true"
@@ -164,7 +197,7 @@ function onDeleteConfirmed() {
     <ConfirmDialog
       :open="confirmOpen"
       title="Elimina bottiglia"
-      message="Eliminare questa bottiglia? Anche le foto verranno eliminate."
+      :message="deleteMessage"
       confirm-label="Elimina"
       danger
       @confirm="onDeleteConfirmed"
