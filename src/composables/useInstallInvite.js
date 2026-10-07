@@ -1,42 +1,59 @@
+import { reactive, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { getSetting, setSetting } from '../db/settings.js'
-import { showBanner, dismissBanner } from './useBanner.js'
-import { shouldShowInstallInvite, canPromptInstall, promptInstall, isIOS } from '../lib/install.js'
+import { shouldShowInstallInvite, canPromptInstall, promptInstall, installPlan, isStandalone } from '../lib/install.js'
+import { detectPlatform } from '../lib/permissions.js'
 
-const IOS_MESSAGE =
-  'Per installare Bacco tocca Condividi, poi «Aggiungi alla schermata Home». Installata, Bacco ' +
-  'protegge meglio i tuoi dati: Safari può cancellare i dati dei siti non usati da 7 giorni.'
+// Dopo quanto tempo dall'apertura proporre l'installazione (FR-020).
+const INVITE_DELAY_MS = 10_000
 
-/** Mostra l'invito all'installazione (FR-020), priorità 10 (la più bassa). */
+// Stato del modale, condiviso con InstallInvite.vue.
+const invite = reactive({ open: false, plan: null })
+
+/**
+ * Invito all'installazione: un modale dopo 10 secondi, solo se Bacco non è installata e mai
+ * mentre si compila una bottiglia o è aperto un pannello (aspetta una pagina libera).
+ */
 export function useInstallInvite() {
+  const route = useRoute()
+  let pending = null
+
+  const isBusy = () => route.name === 'bottle-new' || !!route.meta.modal
+
+  function openIfFree() {
+    if (!pending || isBusy() || isStandalone()) return
+    invite.plan = pending
+    invite.open = true
+    pending = null
+  }
+
   async function check() {
     const dismissedAt = await getSetting('installPromptDismissedAt', null)
     if (!shouldShowInstallInvite({ dismissedAt })) return
-
-    async function dismiss() {
-      await setSetting('installPromptDismissedAt', new Date().toISOString())
-      dismissBanner('install-invite')
-    }
-
-    if (isIOS()) {
-      showBanner({
-        id: 'install-invite',
-        message: IOS_MESSAGE,
-        priority: 10,
-        actions: [{ label: 'Ho capito', onClick: dismiss }],
-      })
-    } else if (canPromptInstall()) {
-      showBanner({
-        id: 'install-invite',
-        message: 'Aggiungi Bacco alla schermata Home per aprirlo con un tocco.',
-        priority: 10,
-        actions: [
-          { label: 'Installa', onClick: () => promptInstall().then(dismiss) },
-          { label: 'Non ora', onClick: dismiss },
-        ],
-      })
-    }
+    pending = installPlan(detectPlatform(), canPromptInstall())
+    openIfFree()
   }
 
-  // Un breve ritardo lascia il tempo al browser di emettere beforeinstallprompt.
-  setTimeout(check, 1500)
+  watch(() => route.fullPath, openIfFree)
+  window.addEventListener('appinstalled', () => {
+    invite.open = false
+    pending = null
+  })
+  setTimeout(check, INVITE_DELAY_MS)
+}
+
+export function useInstallInviteState() {
+  return invite
+}
+
+/** "Non ora": il modale torna fra 30 giorni. */
+export async function dismissInstallInvite() {
+  invite.open = false
+  await setSetting('installPromptDismissedAt', new Date().toISOString())
+}
+
+/** "Installa": invito nativo del browser. Se l'utente rifiuta, si riprova fra 30 giorni. */
+export async function acceptInstallInvite() {
+  await promptInstall()
+  await dismissInstallInvite()
 }

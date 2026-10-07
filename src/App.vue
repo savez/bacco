@@ -4,6 +4,7 @@ import { RouterView, RouterLink, useRoute, useRouter } from 'vue-router'
 import AppBanner from './components/AppBanner.vue'
 import BottomNav from './components/BottomNav.vue'
 import RouteSheet from './components/RouteSheet.vue'
+import InstallInvite from './components/InstallInvite.vue'
 import { usePwaUpdate } from './composables/usePwaUpdate.js'
 import { useBackupReminder } from './composables/useBackupReminder.js'
 import { useInstallInvite } from './composables/useInstallInvite.js'
@@ -65,6 +66,7 @@ watch(
       <RouterView />
     </RouteSheet>
     <AppBanner />
+    <InstallInvite />
     <BottomNav :inert="isModal || null" />
   </div>
 </template>
