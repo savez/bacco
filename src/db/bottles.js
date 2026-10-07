@@ -162,25 +162,11 @@ export async function getSuggestions() {
 }
 
 /**
- * Ultima bottiglia registrata con un dato codice a barre (FR-025), o undefined.
- * @param {string} code
+ * Etichetta già registrata (FR-110): stesso nome, produttore e annata (senza badare ad
+ * accenti e maiuscole). Serve a evitare doppioni.
+ * @param {{name?: string, producer?: string|null, vintage?: number|null}} label
  */
-export async function findLatestByBarcode(code) {
-  const matches = await db.bottles.where('barcode').equals(code).toArray()
-  matches.sort((a, b) => b.consumedAt.localeCompare(a.consumedAt))
-  return matches[0]
-}
-
-/**
- * Etichetta già registrata (FR-110): stesso codice a barre o, in mancanza, stesso nome,
- * produttore e annata (senza badare ad accenti e maiuscole). Serve a evitare doppioni.
- * @param {{barcode?: string|null, name?: string, producer?: string|null, vintage?: number|null}} label
- */
-export async function findSameLabel({ barcode, name, producer, vintage }) {
-  if (barcode) {
-    const byBarcode = await findLatestByBarcode(barcode)
-    if (byBarcode) return byBarcode
-  }
+export async function findSameLabel({ name, producer, vintage }) {
   if (!name) return undefined
   const key = (n, p, v) => `${normalizeText(n ?? '').trim()}|${normalizeText(p ?? '').trim()}|${v ?? ''}`
   const wanted = key(name, producer, vintage)

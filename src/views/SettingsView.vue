@@ -14,6 +14,7 @@ import ConfirmDialog from '../components/ConfirmDialog.vue'
 import PermissionHelp from '../components/PermissionHelp.vue'
 import SupportCard from '../components/SupportCard.vue'
 import { useUpdateCheck } from '../composables/usePwaUpdate.js'
+import { withTimeout } from '../lib/timeout.js'
 import { queryPermission, explainCameraError, explainLocationError } from '../lib/permissions.js'
 import { getCurrentLocation } from '../lib/geo.js'
 import { closeSheet } from '../composables/useSheet.js'
@@ -40,7 +41,26 @@ const deleteConfirmOpen = ref(false)
 const deleteSecondConfirmOpen = ref(false)
 const fileInput = ref(null)
 
+// --- Stato dei dati (diagnostica) ---------------------------------------------------------
+// Mostra se il database del dispositivo è aperto e aggiornato: se un aggiornamento è rimasto
+// bloccato (es. due finestre di Bacco aperte) qui si vede subito.
+const dbStatus = ref({ state: 'checking' })
+
+async function checkDatabase() {
+  dbStatus.value = { state: 'checking' }
+  try {
+    const counts = await withTimeout(
+      Promise.all([db.bottles.count(), db.photos.count(), db.cellarMoves.count()]),
+      5000,
+    )
+    dbStatus.value = { state: 'ok', version: db.verno, bottles: counts[0], photos: counts[1], moves: counts[2] }
+  } catch (err) {
+    dbStatus.value = { state: 'error', name: err?.name ?? 'errore' }
+  }
+}
+
 onMounted(async () => {
+  checkDatabase()
   lastExportAt.value = await getSetting('lastExportAt', null)
   refreshPermissions()
 })
@@ -199,7 +219,7 @@ async function onSecondConfirm() {
     <section class="mt-8">
       <h2 class="font-display text-lg uppercase tracking-wide">Permessi</h2>
       <p class="mt-1 text-sm text-cenere">
-        Servono solo quando li usi: la fotocamera per foto e codici a barre, la posizione per la mappa.
+        Servono solo quando li usi: la fotocamera per le foto, la posizione per la mappa.
       </p>
       <div
         v-for="item in [
@@ -268,6 +288,30 @@ async function onSecondConfirm() {
         @click="onDeleteAllRequested"
       >
         Elimina tutti i dati
+      </button>
+    </section>
+
+    <section class="mt-8">
+      <h2 class="font-display text-lg uppercase tracking-wide">Stato dei dati</h2>
+      <p class="mt-2 text-sm" role="status">
+        <template v-if="dbStatus.state === 'checking'">Controllo in corso…</template>
+        <template v-else-if="dbStatus.state === 'ok'">
+          <span class="font-bold text-gesso">✓ Database v{{ dbStatus.version }}</span>
+          <span class="text-cenere">
+            · {{ dbStatus.bottles }} bottiglie · {{ dbStatus.photos }} foto · {{ dbStatus.moves }} movimenti di cantina
+          </span>
+        </template>
+        <span v-else class="text-feccia">
+          I dati non rispondono ({{ dbStatus.name }}). Chiudi le altre finestre o schede di Bacco e riaprila.
+        </span>
+      </p>
+      <button
+        v-if="dbStatus.state === 'error'"
+        type="button"
+        class="mt-2 min-h-11 rounded-md border border-rame/30 px-3 font-bold"
+        @click="checkDatabase"
+      >
+        Ricontrolla
       </button>
     </section>
 

@@ -38,11 +38,11 @@ Bacco è una PWA **senza backend**. I principi sono descritti in
 
 - **I dati del registro non lasciano mai il dispositivo.** Bottiglie, foto, note e
   coordinate vivono solo nell'IndexedDB del browser. Non c'è login, analytics o telemetria.
-- **Rete solo in lettura e solo verso servizi pubblici elencati nella CSP**:
-  - `tile.openstreetmap.org`: tessere della mappa (riceve solo le coordinate della tessera visualizzata);
-  - `world.openfoodfacts.org`: ricerca per codice a barre (riceve solo il codice).
+- **Rete solo in lettura e solo verso un servizio pubblico elencato nella CSP**:
+  `tile.openstreetmap.org`, per le tessere della mappa (riceve solo le coordinate della
+  tessera visualizzata).
 - **Content Security Policy restrittiva** (`script-src 'self'`, niente script inline, niente
-  `eval` tranne `wasm-unsafe-eval` per il decoder dei codici a barre), definita sia in
+  `eval`, `connect-src 'self'`), definita sia in
   [docker/nginx-security-headers.conf](docker/nginx-security-headers.conf) sia in
   [render.yaml](render.yaml).
 - **Permessi minimi**: fotocamera e posizione solo su richiesta esplicita dell'utente, mai all'avvio.
@@ -70,7 +70,6 @@ Una volta confermato e corretto il problema:
 - Non esiste un server del maintainer da attaccare: l'istanza pubblica serve solo file statici.
 - Le vulnerabilità del browser o del sistema operativo dell'utente.
 - L'accesso fisico a un dispositivo sbloccato (i dati locali non sono cifrati).
-- I contenuti restituiti da Open Food Facts (dati pubblici di terzi, mostrati come testo).
 
 ## Licenza
 

@@ -31,10 +31,10 @@ foto, punteggio, analisi organolettica, abbinamento, luogo e ricordi. Funziona o
 
 - 🍾 **Registra una bottiglia in pochi tocchi**: nome, tipo e punteggio bastano, il resto è facoltativo.
 - 📷 **Foto** scattate dall'app o scelte dalla galleria.
-- 🔎 **Codice a barre**: scansione con la fotocamera e ricerca su
-  [Open Food Facts](https://world.openfoodfacts.org), che compila solo i campi vuoti.
 - 🍇 **Scheda completa**: sottocategoria (Rosso, Bianco, IPA, Stout…), denominazione
   (DOCG, DOC, IGT, IGP), annata, gradazione, analisi organolettica, abbinamento, note.
+- 🏷️ **Contrassegno di Stato**: il codice della fascetta dei vini DOC e DOCG
+  (es. ADK007842971), da verificare con l'app ufficiale *Trust your wine* del Poligrafico.
 - ⭐ **Punteggio da 1 a 5** con le bottiglie al posto delle stelle e una descrizione per ogni livello.
 - 🗂️ **Registro** con ricerca e filtri per tipo, anno e mese.
 - 🍷 **Cantina personale**: indica quante bottiglie metti in cantina (0 = la bevi subito);
@@ -56,7 +56,7 @@ foto, punteggio, analisi organolettica, abbinamento, luogo e ricordi. Funziona o
 - Nessun login e nessun server: tutto vive nell'IndexedDB del browser.
 - Nessun dato del registro esce dal dispositivo, se non con un backup o una condivisione fatti da te.
 - Le uniche richieste di rete sono in sola lettura verso servizi pubblici:
-  le tessere di OpenStreetMap per la mappa e Open Food Facts per il codice a barre
+  le tessere di OpenStreetMap per la mappa
   (che riceve solo il codice).
 - Fotocamera e posizione vengono chieste solo quando le usi, mai all'avvio.
 
@@ -93,7 +93,7 @@ Per provarla dal telefono in rete locale (HTTPS con certificato `mkcert`) vedi
 [CONTRIBUTING.md](CONTRIBUTING.md#provare-dal-telefono).
 
 **Stack**: Vue 3, Vue Router, Tailwind CSS 4, Dexie (IndexedDB), vite-plugin-pwa (Workbox),
-Leaflet, barcode-detector (ZXing in WebAssembly), Vitest.
+Leaflet, Vitest.
 
 ## Deploy
 
@@ -115,5 +115,4 @@ Se Bacco ti piace, [offrimi una birra o un vino](https://buymeacoffee.com/goeokw
 ## Licenza
 
 [MIT](LICENSE) © Saverio Menin.
-Dati dei prodotti da [Open Food Facts](https://world.openfoodfacts.org) (ODbL);
 mappe © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors.
