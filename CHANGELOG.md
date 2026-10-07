@@ -4,6 +4,20 @@ Tutte le modifiche rilevanti del progetto sono documentate in questo file, gener
 [release-please](https://github.com/googleapis/release-please) a partire dai
 [Conventional Commits](https://www.conventionalcommits.org/it/).
 
+## [1.2.0](https://github.com/savez/bacco/compare/v1.1.0...v1.2.0) (2026-10-07)
+
+
+### ✨ Novità
+
+* modulo di registrazione riordinato in sequenza logica ([bcb4a6f](https://github.com/savez/bacco/commit/bcb4a6f1817a012c4280bebf7a7d0cadd9f5a1d2))
+* modulo di registrazione riordinato in sequenza logica ([7d7d239](https://github.com/savez/bacco/commit/7d7d239c0feab9a3d3d700732c7f49a50b48ff15))
+
+
+### 🐛 Correzioni
+
+* bottiglie in cantina da 0 (bevuta subito) e registro movimenti in un accordion ([587ce2f](https://github.com/savez/bacco/commit/587ce2ff0441fb7ebbbbc3aab1c2b112729a734f))
+* bottiglie in cantina da 0 e registro movimenti in un accordion ([5c0629a](https://github.com/savez/bacco/commit/5c0629a113c97d92bb2d0e33a158f8a9e2cfdfea))
+
 ## [1.1.0](https://github.com/savez/bacco/compare/v1.0.0...v1.1.0) (2026-10-07)
 
 
