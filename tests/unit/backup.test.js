@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { db } from '../../src/db/db.js'
 import { createBottle } from '../../src/db/bottles.js'
+import { createWish } from '../../src/db/wishes.js'
 import { setSetting, getSetting } from '../../src/db/settings.js'
 import { buildBackupBlob } from '../../src/backup/exportJson.js'
 import { importBackup } from '../../src/backup/importJson.js'
@@ -26,6 +27,7 @@ afterEach(async () => {
   await db.bottles.clear()
   await db.photos.clear()
   await db.cellarMoves.clear()
+  await db.wishes.clear()
   await db.settings.clear()
   db.close()
 })
@@ -59,7 +61,7 @@ describe('round trip (SC-004)', () => {
 
     const result = await importBackup(file, { makeThumbnail: fakeThumbnail })
 
-    expect(result).toEqual({ added: 1, updated: 0, unchanged: 0 })
+    expect(result).toEqual({ added: 1, updated: 0, unchanged: 0, wishes: { added: 0, updated: 0, unchanged: 0 } })
     const restored = await db.bottles.get(bottle.id)
     expect(restored.name).toBe('Barolo Cannubi')
     expect(restored.notes).toBe('- ciliegia')
@@ -173,7 +175,7 @@ describe('unione all\'importazione', () => {
       bottles: [makeBackupBottle({ name: 'Nuova' })],
     }
     const result = await importBackup(jsonFile(backup), { makeThumbnail: fakeThumbnail })
-    expect(result).toEqual({ added: 1, updated: 0, unchanged: 0 })
+    expect(result).toEqual({ added: 1, updated: 0, unchanged: 0, wishes: { added: 0, updated: 0, unchanged: 0 } })
   })
 
   it('sostituisce la bottiglia locale se il backup è più recente', async () => {
@@ -187,7 +189,7 @@ describe('unione all\'importazione', () => {
       jsonFile({ app: 'bacco', formatVersion: 1, exportedAt: new Date().toISOString(), bottles: [backupBottle] }),
       { makeThumbnail: fakeThumbnail },
     )
-    expect(result).toEqual({ added: 0, updated: 1, unchanged: 0 })
+    expect(result).toEqual({ added: 0, updated: 1, unchanged: 0, wishes: { added: 0, updated: 0, unchanged: 0 } })
     const stored = await db.bottles.get(local.id)
     expect(stored.name).toBe('Dal backup, più recente')
   })
@@ -203,7 +205,7 @@ describe('unione all\'importazione', () => {
       jsonFile({ app: 'bacco', formatVersion: 1, exportedAt: new Date().toISOString(), bottles: [backupBottle] }),
       { makeThumbnail: fakeThumbnail },
     )
-    expect(result).toEqual({ added: 0, updated: 0, unchanged: 1 })
+    expect(result).toEqual({ added: 0, updated: 0, unchanged: 1, wishes: { added: 0, updated: 0, unchanged: 0 } })
     const stored = await db.bottles.get(local.id)
     expect(stored.name).toBe('Locale recente')
   })
@@ -327,5 +329,89 @@ describe('vitigno nel backup', () => {
     await db.cellarMoves.clear()
     await importBackup(jsonFile(data), { makeThumbnail: fakeThumbnail })
     expect((await db.bottles.get(b.id)).grape ?? null).toBeNull()
+  })
+})
+
+describe('wishlist nel backup (specs/005-wishlist)', () => {
+  const file = async () => new File([await buildBackupBlob()], 'backup.json', { type: 'application/json' })
+  const wishRecord = (extra = {}) => ({
+    id: crypto.randomUUID(),
+    type: 'wine',
+    name: 'Timorasso',
+    producer: null,
+    vintage: null,
+    notes: '',
+    externalUrl: null,
+    createdAt: '2026-10-01T10:00:00.000Z',
+    updatedAt: '2026-10-01T10:00:00.000Z',
+    ...extra,
+  })
+
+  it('esporta sempre i desideri, anche nessuno', async () => {
+    const data = JSON.parse(await (await file()).text())
+    expect(data.formatVersion).toBe(2)
+    expect(data.wishes).toEqual([])
+  })
+
+  it('esporta e reimporta i desideri identici', async () => {
+    const a = await createWish({ type: 'wine', name: 'Timorasso', producer: 'Vigneti Massa', vintage: 2021, notes: 'Da Marco\nminerale', externalUrl: 'https://x.it/a' })
+    const b = await createWish({ type: 'beer', name: 'Tipopils' })
+    const backup = await file()
+    await db.wishes.clear()
+
+    const result = await importBackup(backup, { makeThumbnail: fakeThumbnail })
+    expect(result.wishes).toEqual({ added: 2, updated: 0, unchanged: 0 })
+    expect(await db.wishes.get(a.id)).toEqual(a)
+    expect(await db.wishes.get(b.id)).toEqual(b)
+  })
+
+  it('un backup senza desideri si importa e lascia la wishlist com\'è', async () => {
+    const local = await createWish({ type: 'wine', name: 'Locale' })
+    const result = await importBackup(jsonFile({ app: 'bacco', formatVersion: 2, bottles: [], cellarMoves: [] }), {
+      makeThumbnail: fakeThumbnail,
+    })
+    expect(result.wishes).toEqual({ added: 0, updated: 0, unchanged: 0 })
+    expect(await db.wishes.get(local.id)).toEqual(local)
+  })
+
+  it('unisce per updatedAt come le bottiglie', async () => {
+    const newer = wishRecord({ name: 'Locale vecchio' })
+    const older = wishRecord({ name: 'Locale nuovo', updatedAt: '2026-10-05T10:00:00.000Z' })
+    await db.wishes.bulkPut([newer, older])
+    const result = await importBackup(
+      jsonFile({
+        app: 'bacco',
+        formatVersion: 2,
+        bottles: [],
+        cellarMoves: [],
+        wishes: [
+          { ...newer, name: 'Dal backup', updatedAt: '2026-10-06T10:00:00.000Z' },
+          { ...older, name: 'Backup più vecchio', updatedAt: '2026-10-02T10:00:00.000Z' },
+        ],
+      }),
+      { makeThumbnail: fakeThumbnail },
+    )
+    expect(result.wishes).toEqual({ added: 0, updated: 1, unchanged: 1 })
+    expect((await db.wishes.get(newer.id)).name).toBe('Dal backup')
+    expect((await db.wishes.get(older.id)).name).toBe('Locale nuovo')
+  })
+
+  it.each([
+    ['nome vuoto', { name: '' }, /Desiderio 2, campo "name"/],
+    ['id non valido', { id: 'abc' }, /Desiderio 2: identificativo non valido/],
+    ['data non valida', { createdAt: 'ieri' }, /Desiderio 2: date non valide/],
+  ])('rifiuta un desiderio con %s senza scrivere nulla', async (_, broken, message) => {
+    const bottleId = crypto.randomUUID()
+    const now = '2026-10-01T10:00:00.000Z'
+    const backup = jsonFile({
+      app: 'bacco',
+      formatVersion: 2,
+      bottles: [{ id: bottleId, name: 'Barolo', type: 'wine', rating: 4, consumedAt: now, createdAt: now, updatedAt: now }],
+      cellarMoves: [],
+      wishes: [wishRecord(), wishRecord(broken)],
+    })
+    await expect(importBackup(backup, { makeThumbnail: fakeThumbnail })).rejects.toThrow(message)
+    expect(await db.bottles.count()).toBe(0)
+    expect(await db.wishes.count()).toBe(0)
   })
 })

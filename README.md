@@ -40,9 +40,12 @@ foto, punteggio, analisi organolettica, abbinamento, luogo e ricordi. Funziona o
   (es. ADK007842971), da verificare con l'app ufficiale *Trust your wine* del Poligrafico.
 - ⭐ **Punteggio da 1 a 5** con le bottiglie al posto delle stelle e una descrizione per ogni livello.
 - 🗂️ **Registro** con ricerca e filtri per tipo, anno e mese.
-- 🍷 **Cantina personale**: Diario e Cantina sono due schede della Home; nella Cantina ogni
-  bottiglia ha il suo pulsante **Stappa**, e al primo stappo Bacco ti chiede com'è.
-  Registro movimenti (entrate, uscite, rettifiche) e "Correggi quantità".
+- 🍷 **Cantina personale**: Diario, Cantina e Wishlist sono tre schede della Home, ognuna con il
+  suo numero; nella Cantina ogni bottiglia ha il suo pulsante **Stappa**, e al primo stappo
+  Bacco ti chiede com'è. Registro movimenti (entrate, uscite, rettifiche) e "Correggi quantità".
+- 📝 **Wishlist** dei vini e delle birre da provare: nome, produttore, annata, chi te l'ha
+  consigliato e il link alla scheda tecnica. Quando lo assaggi, **L'ho provato** apre la
+  registrazione già compilata e lo toglie dalla lista.
 - 🏷️ **Note organolettiche a chip**: aromi diversi per vino e birra e abbinamenti da toccare,
   più il testo libero; la ricerca trova anche "tannico" o "pizza".
 - 🗺️ **Mappa** dei luoghi dove hai bevuto (solo se acconsenti alla posizione).

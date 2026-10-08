@@ -69,6 +69,16 @@ db.version(3)
     await tx.table('cellarMoves').bulkAdd(firstMoves)
   })
 
+// v4 (wishlist, specs/005-wishlist): nuova tabella `wishes` per i vini e le birre da
+// provare. Nessun dato da convertire: la tabella nasce vuota, le altre restano come in v3.
+db.version(4).stores({
+  bottles: 'id, consumedAt, tastedAt, updatedAt, type, barcode',
+  photos: 'id, bottleId, [bottleId+order]',
+  settings: 'key',
+  cellarMoves: 'id, bottleId, [bottleId+at]',
+  wishes: 'id, createdAt',
+})
+
 // --- Più finestre aperte -----------------------------------------------------------------
 // Un aggiornamento dello schema aspetta che TUTTE le finestre di Bacco chiudano il database.
 // Se una resta aperta l'aggiornamento si blocca, e con lui ogni lettura e salvataggio: per

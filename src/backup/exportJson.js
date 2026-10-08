@@ -41,8 +41,15 @@ export async function buildBackupBlob() {
     parts.push(first ? entry : `,${entry}`)
     first = false
   }
-  // Cantina (formatVersion 2): registro movimenti di tutte le etichette.
-  parts.push('],"cellarMoves":', JSON.stringify(await db.cellarMoves.toArray()), '}')
+  // Cantina (formatVersion 2): registro movimenti di tutte le etichette. Wishlist
+  // (specs/005-wishlist): campo facoltativo dello stesso formato, letto solo se c'è.
+  parts.push(
+    '],"cellarMoves":',
+    JSON.stringify(await db.cellarMoves.toArray()),
+    ',"wishes":',
+    JSON.stringify(await db.wishes.toArray()),
+    '}',
+  )
   return new Blob(parts, { type: 'application/json' })
 }
 

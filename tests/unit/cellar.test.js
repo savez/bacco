@@ -15,6 +15,7 @@ afterEach(async () => {
   await db.bottles.clear()
   await db.photos.clear()
   await db.cellarMoves.clear()
+  await db.wishes.clear()
   db.close()
 })
 
@@ -182,5 +183,28 @@ describe('primo assaggio con i chip', () => {
     await recordFirstTasting(bottle.id, { rating: 5, aromaTags: ['Fruttato'], pairingTags: ['Pizza'], pairing: 'margherita' })
     await undoMove(op)
     expect(await db.bottles.get(bottle.id)).toMatchObject({ rating: null, tastedAt: null, aromaTags: [], pairingTags: [], pairing: '' })
+  })
+})
+
+describe('addToCellar da un desiderio (specs/005-wishlist)', () => {
+  const addWish = async () => {
+    const id = crypto.randomUUID()
+    await db.wishes.put({ id, type: 'wine', name: 'Barolo', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
+    return id
+  }
+
+  it('aggiunge le bottiglie e toglie il desiderio', async () => {
+    const bottle = await tasted()
+    const wishId = await addWish()
+    await addToCellar(bottle.id, 2, { removeWishId: wishId })
+    expect((await db.bottles.get(bottle.id)).cellarCount).toBe(2)
+    expect(await db.wishes.get(wishId)).toBeUndefined()
+  })
+
+  it('lascia il desiderio se l\'aggiunta non riesce', async () => {
+    const bottle = await inCellar(999)
+    const wishId = await addWish()
+    await expect(addToCellar(bottle.id, 1, { removeWishId: wishId })).rejects.toBeInstanceOf(CellarError)
+    expect(await db.wishes.get(wishId)).toBeTruthy()
   })
 })

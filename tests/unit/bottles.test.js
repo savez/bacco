@@ -18,6 +18,7 @@ afterEach(async () => {
   await db.bottles.clear()
   await db.photos.clear()
   await db.cellarMoves.clear()
+  await db.wishes.clear()
   await db.settings.clear()
   db.close()
 })
@@ -205,5 +206,37 @@ describe('modifica della data di una bevuta subito', () => {
     await db.bottles.update(bottle.id, { rating: 4, tastedAt: '2026-10-05T20:00:00.000Z' })
     const updated = await updateBottle(bottle.id, { name: 'Barolo', type: 'wine', rating: 4, consumedAt: '2026-07-01T20:00:00.000Z' })
     expect(updated.tastedAt).toBe('2026-10-05T20:00:00.000Z')
+  })
+})
+
+describe('createBottle da un desiderio (specs/005-wishlist)', () => {
+  const addWish = async () => {
+    const id = crypto.randomUUID()
+    await db.wishes.put({ id, type: 'beer', name: 'Tipopils', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })
+    return id
+  }
+
+  it('crea la bottiglia e toglie il desiderio', async () => {
+    const wishId = await addWish()
+    const bottle = await createBottle(sample(), { removeWishId: wishId })
+    expect(await db.bottles.get(bottle.id)).toBeTruthy()
+    expect(await db.wishes.get(wishId)).toBeUndefined()
+  })
+
+  it('lascia il desiderio se la bottiglia non è valida', async () => {
+    const wishId = await addWish()
+    await expect(createBottle({ ...sample(), rating: null }, { removeWishId: wishId })).rejects.toMatchObject({ name: 'ValidationError' })
+    expect(await db.wishes.get(wishId)).toBeTruthy()
+  })
+
+  it('crea la bottiglia anche se il desiderio non c\'è più', async () => {
+    const bottle = await createBottle(sample(), { removeWishId: crypto.randomUUID() })
+    expect(await db.bottles.get(bottle.id)).toBeTruthy()
+  })
+
+  it('senza removeWishId non tocca i desideri', async () => {
+    const wishId = await addWish()
+    await createBottle(sample())
+    expect(await db.wishes.get(wishId)).toBeTruthy()
   })
 })

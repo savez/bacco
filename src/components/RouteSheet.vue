@@ -3,7 +3,8 @@ import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { closeSheet } from '../composables/useSheet.js'
 
-// Pannello modale per le pagine con `meta.modal` (dettaglio e modifica): sale dal basso su
+// Pannello modale per le pagine con `meta.modal` (dettaglio e modifica di bottiglie e
+// desideri; il nome per i lettori di schermo è in `meta.sheetLabel`): sale dal basso su
 // telefono, è centrato su schermi larghi. Non è un <dialog> nativo perché i banner
 // ("Modifiche salvate") devono restare visibili sopra; la pagina sotto è resa `inert` da App.
 const route = useRoute()
@@ -44,7 +45,7 @@ onBeforeUnmount(() => {
       ref="panelRef"
       role="dialog"
       aria-modal="true"
-      :aria-label="route.name === 'bottle-edit' ? 'Modifica bottiglia' : 'Dettaglio bottiglia'"
+      :aria-label="route.meta.sheetLabel"
       tabindex="-1"
       class="sheet relative max-h-[92dvh] w-full max-w-xl overflow-y-auto overscroll-contain rounded-t-3xl bg-botte text-gesso shadow-2xl outline-none sm:max-h-[90dvh] sm:rounded-3xl"
     >

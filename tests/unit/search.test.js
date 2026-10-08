@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeText, filterBottles, groupByMonth, availableYears, availableMonths, cellarSummary } from '../../src/lib/search.js'
+import { normalizeText, filterBottles, groupByMonth, availableYears, availableMonths, cellarSummary, filterWishes } from '../../src/lib/search.js'
 
 describe('normalizeText', () => {
   it('rimuove accenti e porta in minuscolo', () => {
@@ -176,5 +176,34 @@ describe('ricerca per vitigno', () => {
   it('anche nella cantina', () => {
     const cellar = list.map((b) => ({ ...b, cellarCount: 1 }))
     expect(filterBottles(cellar, { query: 'nebb', cellar: true }).map((b) => b.name)).toEqual(['Barolo'])
+  })
+})
+
+describe('filterWishes', () => {
+  const wishes = [
+    { id: 'a', type: 'wine', name: 'Timorasso Derthona', producer: 'Vigneti Massa', notes: 'Consigliato da Marco', createdAt: '2026-10-01T10:00:00.000Z' },
+    { id: 'b', type: 'beer', name: 'Tipopils', producer: null, notes: '', createdAt: '2026-10-03T10:00:00.000Z' },
+    { id: 'c', type: 'wine', name: 'Barolo', producer: 'Café du Vin', notes: '', createdAt: '2026-10-02T10:00:00.000Z' },
+  ]
+  const ids = (list) => list.map((w) => w.id)
+
+  it('senza filtri ordina dal più recente', () => {
+    expect(ids(filterWishes(wishes))).toEqual(['b', 'c', 'a'])
+  })
+
+  it('filtra per tipo', () => {
+    expect(ids(filterWishes(wishes, { type: 'beer' }))).toEqual(['b'])
+    expect(ids(filterWishes(wishes, { type: 'wine' }))).toEqual(['c', 'a'])
+  })
+
+  it('cerca in nome, produttore e note senza badare a maiuscole e accenti', () => {
+    expect(ids(filterWishes(wishes, { query: 'marco' }))).toEqual(['a'])
+    expect(ids(filterWishes(wishes, { query: 'MASSA' }))).toEqual(['a'])
+    expect(ids(filterWishes(wishes, { query: 'cafe' }))).toEqual(['c'])
+    expect(ids(filterWishes(wishes, { query: 'pils' }))).toEqual(['b'])
+  })
+
+  it('combina ricerca e tipo', () => {
+    expect(filterWishes(wishes, { query: 'ti', type: 'beer' }).map((w) => w.id)).toEqual(['b'])
   })
 })

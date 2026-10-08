@@ -49,7 +49,8 @@ describe('migrazione v2 → v3 (cantina)', () => {
     old.close()
 
     await db.open()
-    expect(db.verno).toBe(3)
+    // Il DB si apre all'ultima versione: la migrazione v3 è passata (v4 aggiunge solo i desideri).
+    expect(db.verno).toBeGreaterThanOrEqual(3)
     const [a, b] = await db.bottles.bulkGet(['a', 'b'])
     expect(a).toMatchObject({ rating: 4, cellarCount: 0, cellarUpdatedAt: null, tastedAt: '2026-09-01T20:00:00.000Z' })
     expect(b.tastedAt).toBe('2026-10-02T19:30:00.000Z')
@@ -61,6 +62,45 @@ describe('migrazione v2 → v3 (cantina)', () => {
     // L'indice composto serve al registro movimenti della scheda.
     const viaIndex = await db.cellarMoves.where('[bottleId+at]').between(['b', Dexie.minKey], ['b', Dexie.maxKey]).toArray()
     expect(viaIndex).toHaveLength(1)
+    db.close()
+  })
+})
+
+const V3 = {
+  bottles: 'id, consumedAt, tastedAt, updatedAt, type, barcode',
+  photos: 'id, bottleId, [bottleId+order]',
+  settings: 'key',
+  cellarMoves: 'id, bottleId, [bottleId+at]',
+}
+
+describe('migrazione v3 → v4 (wishlist)', () => {
+  it('aggiunge la tabella dei desideri vuota e lascia intatte bottiglie e movimenti', async () => {
+    db.close()
+    await Dexie.delete('bacco')
+
+    const bottles = [
+      { id: 'a', name: 'Barolo', type: 'wine', rating: 4, consumedAt: '2026-09-01T20:00:00.000Z', cellarCount: 2 },
+      { id: 'b', name: 'Tipopils', type: 'beer', rating: 3, consumedAt: '2026-10-02T19:30:00.000Z', cellarCount: 0 },
+    ]
+    const moves = [
+      { id: 'm1', bottleId: 'a', type: 'first', qty: null, from: null, to: null, at: '2026-09-01T20:00:00.000Z' },
+      { id: 'm2', bottleId: 'a', type: 'in', qty: 2, from: null, to: null, at: '2026-09-01T20:00:00.000Z' },
+      { id: 'm3', bottleId: 'b', type: 'first', qty: null, from: null, to: null, at: '2026-10-02T19:30:00.000Z' },
+    ]
+    const old = new Dexie('bacco')
+    old.version(3).stores(V3)
+    await old.bottles.bulkPut(bottles)
+    await old.cellarMoves.bulkPut(moves)
+    old.close()
+
+    await db.open()
+    expect(db.verno).toBe(4)
+    expect(await db.bottles.bulkGet(['a', 'b'])).toEqual(bottles)
+    expect(await db.cellarMoves.orderBy('id').toArray()).toEqual(moves)
+    expect(await db.wishes.count()).toBe(0)
+
+    await db.wishes.put({ id: 'w', name: 'Timorasso', type: 'wine', createdAt: '2026-10-08T10:00:00.000Z' })
+    expect(await db.wishes.orderBy('createdAt').first()).toMatchObject({ id: 'w' })
     db.close()
   })
 })

@@ -28,13 +28,15 @@ async function getOrFail(id) {
 const snapshotOf = (bottle) => Object.fromEntries(CELLAR_FIELDS.map((key) => [key, bottle[key] ?? SNAPSHOT_DEFAULTS[key] ?? null]))
 
 /**
- * Mette in cantina `n` bottiglie in più (FR-102).
+ * Mette in cantina `n` bottiglie in più (FR-102). Con `removeWishId` (etichetta già registrata
+ * scelta da "L'ho provato", specs/005-wishlist) il desiderio si toglie nella stessa transazione.
  * @param {string} id
  * @param {number} n
+ * @param {{removeWishId?: string|null}} [opts]
  */
-export async function addToCellar(id, n) {
+export async function addToCellar(id, n, { removeWishId = null } = {}) {
   if (!Number.isInteger(n) || n < 1) throw new CellarError('Aggiungi almeno 1 bottiglia.')
-  return db.transaction('rw', db.bottles, db.cellarMoves, async () => {
+  return db.transaction('rw', db.bottles, db.cellarMoves, db.wishes, async () => {
     const bottle = await getOrFail(id)
     const current = bottle.cellarCount ?? 0
     if (current + n > CELLAR_MAX) {
@@ -43,6 +45,7 @@ export async function addToCellar(id, n) {
     const entry = move(id, 'in', { qty: n })
     await db.bottles.update(id, { cellarCount: current + n, cellarUpdatedAt: entry.at, updatedAt: entry.at })
     await db.cellarMoves.add(entry)
+    if (removeWishId) await db.wishes.delete(removeWishId)
     return { move: entry, snapshot: snapshotOf(bottle) }
   })
 }

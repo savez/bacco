@@ -1,18 +1,21 @@
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { RouterLink } from 'vue-router'
-import { takeCellarFilterRequest } from '../lib/homeFilter.js'
+import { takeHomeTabRequest } from '../lib/homeFilter.js'
 import BottleRow from '../components/BottleRow.vue'
+import WishRow from '../components/WishRow.vue'
+import { liveWishes } from '../db/wishes.js'
 import ShareCardDialog from '../components/ShareCardDialog.vue'
 import FirstTastingDialog from '../components/FirstTastingDialog.vue'
 import { useUncork } from '../composables/useUncork.js'
 import { liveBottles } from '../db/bottles.js'
 import { useLiveQuery } from '../composables/useLiveQuery.js'
-import { filterBottles, groupByMonth, availableYears, availableMonths, cellarSummary, tastedDate } from '../lib/search.js'
+import { filterBottles, filterWishes, groupByMonth, availableYears, availableMonths, cellarSummary, tastedDate } from '../lib/search.js'
 import { db } from '../db/db.js'
 import { photoUrl, revokePhotoUrl } from '../db/photos.js'
 
 const bottles = useLiveQuery(() => liveBottles(), [])
+const wishes = useLiveQuery(() => liveWishes(), [])
 
 // Bottiglia di cui si sta preparando la card di condivisione (un solo dialogo per tutta la lista).
 const sharing = ref(null)
@@ -20,25 +23,33 @@ const sharing = ref(null)
 // --- Filtri ---------------------------------------------------------------------------
 const query = ref('')
 const type = ref(null)
-// Schede Diario | Cantina (specs/003-cantina-viva-ui). Si riapre l'ultima scheda usata su
-// questo dispositivo; dopo "Metti in cantina" si apre comunque la Cantina.
+// Schede Diario | Cantina | Wishlist (specs/003-cantina-viva-ui, specs/005-wishlist). Si riapre
+// l'ultima scheda usata su questo dispositivo; dopo un salvataggio si apre la scheda chiesta dal
+// modulo (homeFilter.js), che diventa anche l'ultima usata.
 const TAB_KEY = 'bacco.homeTab'
+const TABS = ['diario', 'cantina', 'wishlist']
 function readTab() {
   try {
-    return localStorage.getItem(TAB_KEY) === 'cantina' ? 'cantina' : 'diario'
+    const saved = localStorage.getItem(TAB_KEY)
+    return TABS.includes(saved) ? saved : 'diario'
   } catch {
     return 'diario'
   }
 }
-const tab = ref(takeCellarFilterRequest() ? 'cantina' : readTab())
-watch(tab, (value) => {
-  try {
-    localStorage.setItem(TAB_KEY, value)
-  } catch {
-    // Archiviazione non disponibile (es. navigazione privata): resta per questa sessione.
-  }
-})
+const tab = ref(takeHomeTabRequest() ?? readTab())
+watch(
+  tab,
+  (value) => {
+    try {
+      localStorage.setItem(TAB_KEY, value)
+    } catch {
+      // Archiviazione non disponibile (es. navigazione privata): resta per questa sessione.
+    }
+  },
+  { immediate: true },
+)
 const cellar = computed(() => tab.value === 'cantina')
+const wishlist = computed(() => tab.value === 'wishlist')
 const year = ref(null)
 const month = ref(null)
 
@@ -54,8 +65,15 @@ watch(year, () => {
   if (month.value && !months.value.includes(month.value)) month.value = null
 })
 
-// Anno e Mese valgono solo nel Diario: nella Cantina non contano come filtri attivi.
-const filtersActive = computed(() => !!(query.value || type.value || (!cellar.value && (year.value || month.value))))
+// Anno e Mese valgono solo nel Diario: in Cantina e Wishlist non contano come filtri attivi.
+const diary = computed(() => tab.value === 'diario')
+const filtersActive = computed(() => !!(query.value || type.value || (diary.value && (year.value || month.value))))
+const filteredWishes = computed(() => filterWishes(wishes.value, { query: query.value, type: type.value }))
+// Le schede si vedono sempre (anche senza bottiglie si arriva alla Wishlist); ricerca e filtri
+// solo se la scheda ha qualcosa da filtrare.
+const showFilters = computed(
+  () => filtersActive.value || (wishlist.value ? wishes.value.length > 0 : bottles.value.length > 0),
+)
 const filtered = computed(() =>
   filterBottles(bottles.value, {
     query: query.value,
@@ -87,6 +105,16 @@ function plural(n, one, many) {
 }
 
 const summary = computed(() => {
+  if (wishlist.value) {
+    const all = wishes.value
+    if (filtersActive.value) return `${filteredWishes.value.length} di ${plural(all.length, 'desiderio', 'desideri')}`
+    const wines = all.filter((w) => w.type === 'wine').length
+    return [
+      plural(all.length, 'desiderio', 'desideri'),
+      plural(wines, 'vino', 'vini'),
+      plural(all.length - wines, 'birra', 'birre'),
+    ].join(' · ')
+  }
   if (cellar.value) {
     const { labels, bottles: total } = cellarSummary(filtered.value)
     return `${plural(labels, 'etichetta', 'etichette')} · ${plural(total, 'bottiglia', 'bottiglie')}`
@@ -140,7 +168,8 @@ const periodFilters = [
 ]
 
 const tabClass = (on) =>
-  `min-h-11 rounded-full font-bold ${on ? 'bg-rame text-doga' : 'text-cenere'}`
+  // Tre schede con il numero: su una riga sola anche a 320 px, testo pieno sugli schermi più larghi.
+  `min-h-11 whitespace-nowrap rounded-full px-1 text-sm font-bold min-[400px]:text-base ${on ? 'bg-rame text-doga' : 'text-cenere'}`
 
 const chipBase = 'inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-full border px-4 text-sm font-bold'
 const chipOff = 'border-rame/30 text-cenere'
@@ -151,15 +180,19 @@ const chipOff = 'border-rame/30 text-cenere'
     <!-- Titolo solo per i lettori di schermo: a video bastano intestazione e menu. -->
     <h1 class="sr-only">Registro</h1>
 
-    <template v-if="bottles.length > 0">
-      <div role="tablist" aria-label="Sezioni" class="mb-3 grid grid-cols-2 gap-1 rounded-full bg-doga p-1">
-        <button type="button" role="tab" :aria-selected="!cellar" :class="tabClass(!cellar)" @click="tab = 'diario'">
-          Diario
-        </button>
-        <button type="button" role="tab" :aria-selected="cellar" :class="tabClass(cellar)" @click="tab = 'cantina'">
-          Cantina · {{ totalInCellar }}
-        </button>
-      </div>
+    <div role="tablist" aria-label="Sezioni" class="mb-3 grid grid-cols-3 gap-1 rounded-full bg-doga p-1">
+      <button type="button" role="tab" :aria-selected="diary" :class="tabClass(diary)" @click="tab = 'diario'">
+        Diario · {{ tasted.length }}
+      </button>
+      <button type="button" role="tab" :aria-selected="cellar" :class="tabClass(cellar)" @click="tab = 'cantina'">
+        Cantina · {{ totalInCellar }}
+      </button>
+      <button type="button" role="tab" :aria-selected="wishlist" :class="tabClass(wishlist)" @click="tab = 'wishlist'">
+        Wishlist · {{ wishes.length }}
+      </button>
+    </div>
+
+    <template v-if="showFilters">
       <div class="relative">
         <svg
           viewBox="0 0 24 24"
@@ -176,8 +209,8 @@ const chipOff = 'border-rame/30 text-cenere'
         <input
           v-model="query"
           type="search"
-          aria-label="Cerca nome, produttore, aroma o abbinamento"
-          placeholder="Cerca nome, produttore, aroma…"
+          :aria-label="wishlist ? 'Cerca nome, produttore o note' : 'Cerca nome, produttore, aroma o abbinamento'"
+          :placeholder="wishlist ? 'Cerca nome, produttore, note…' : 'Cerca nome, produttore, aroma…'"
           class="min-h-11 w-full rounded-full border border-rame/30 bg-doga pl-10 pr-11 text-gesso"
         />
         <button
@@ -212,10 +245,10 @@ const chipOff = 'border-rame/30 text-cenere'
             Birra
           </button>
         </div>
-        <span v-if="!cellar" class="h-6 w-px shrink-0 bg-rame/30" aria-hidden="true"></span>
+        <span v-if="diary" class="h-6 w-px shrink-0 bg-rame/30" aria-hidden="true"></span>
         <!-- Menu nativi senza aspetto di sistema (Safari ignorerebbe forma e altezza): stessi
              chip di Vino/Birra, con una freccia nostra. Il menu che si apre resta quello del sistema. -->
-        <label v-for="f in periodFilters" v-show="!cellar" :key="f.key" class="relative shrink-0">
+        <label v-for="f in periodFilters" v-show="diary" :key="f.key" class="relative shrink-0">
           <span class="sr-only">{{ f.label }}</span>
           <select
             :value="f.model.value"
@@ -246,11 +279,39 @@ const chipOff = 'border-rame/30 text-cenere'
         <button v-if="filtersActive" type="button" class="min-h-11 font-bold text-rame" @click="resetFilters">
           Azzera filtri
         </button>
+        <RouterLink v-if="wishlist" to="/desiderio/nuovo" class="ml-auto inline-flex min-h-11 items-center font-bold text-rame">
+          + Aggiungi
+        </RouterLink>
       </p>
     </template>
 
+    <!-- Wishlist (specs/005-wishlist): vini e birre da provare, senza mesi. -->
+    <template v-if="wishlist">
+      <div v-if="wishes.length === 0" class="flex min-h-[50dvh] flex-col items-center justify-center text-center">
+        <h2 class="font-display text-2xl uppercase tracking-wide">Nessun vino da provare</h2>
+        <p class="mt-2 max-w-xs text-cenere">Annota qui i vini e le birre che ti consigliano o che vuoi cercare.</p>
+        <RouterLink
+          to="/desiderio/nuovo"
+          class="mt-6 inline-flex min-h-12 items-center rounded-full bg-feccia px-6 font-bold text-botte shadow-lg"
+        >
+          + Aggiungi alla wishlist
+        </RouterLink>
+      </div>
+
+      <div v-else-if="filteredWishes.length === 0" class="mt-10 text-center">
+        <p class="text-cenere">Nessun desiderio con questi filtri.</p>
+        <button type="button" class="mt-2 min-h-11 font-bold text-rame" @click="resetFilters">Azzera filtri</button>
+      </div>
+
+      <ul v-else class="divide-y divide-rame/10">
+        <li v-for="wish in filteredWishes" :key="wish.id">
+          <WishRow :wish="wish" />
+        </li>
+      </ul>
+    </template>
+
     <!-- Stato vuoto: un invito, non un messaggio d'assenza. -->
-    <div v-if="bottles.length === 0" class="flex min-h-[60dvh] flex-col items-center justify-center text-center">
+    <div v-else-if="bottles.length === 0" class="flex min-h-[60dvh] flex-col items-center justify-center text-center">
       <img src="/icons/icon.svg" alt="" width="96" height="96" class="h-24 w-24 rounded-3xl shadow-lg" />
       <h2 class="mt-6 font-display text-2xl uppercase tracking-wide">Il registro è vuoto</h2>
       <p class="mt-2 max-w-xs text-cenere">Registra la prima bottiglia: bastano nome, tipo e punteggio.</p>
