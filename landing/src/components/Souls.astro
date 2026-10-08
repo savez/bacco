@@ -1,0 +1,146 @@
+---
+// Le tre anime dell'app: le tre schede della Home (Diario, Cantina, Wishlist) e come una
+// bottiglia passa dall'una all'altra.
+const base = import.meta.env.BASE_URL
+
+const souls = [
+  {
+    key: 'diario',
+    name: 'Diario',
+    when: 'Quello che hai bevuto',
+    body: 'Ogni bottiglia aperta, con foto, punteggio, aromi e il posto dove eri. Raggruppato per mese, da cercare per nome, vitigno o abbinamento.',
+    action: 'Salva bevuta',
+  },
+  {
+    key: 'cantina',
+    name: 'Cantina',
+    when: 'Quello che hai in casa',
+    body: "Quante bottiglie ti restano di ogni etichetta, con il registro di entrate e uscite. Tocchi Stappa e, al primo stappo, Bacco ti chiede com'è.",
+    action: 'Stappa',
+  },
+  {
+    key: 'wishlist',
+    name: 'Wishlist',
+    when: 'Quello che vuoi provare',
+    body: "Il vino che ti ha consigliato un amico, la birra vista in enoteca: nome, produttore, annata, chi te l'ha detto e il link alla scheda tecnica.",
+    action: "L'ho provato",
+  },
+]
+---
+
+<section class="section" id="anime">
+  <div class="container souls-inner">
+    <div>
+      <span class="eyebrow">Tre anime</span>
+      <h2 class="section-title">Bevuto, in casa, da provare.</h2>
+      <p class="section-sub">
+        Tre schede nella Home, ognuna con il suo numero. Una bottiglia passa dall'una all'altra con un tocco:
+        dalla Wishlist al Diario con <strong>L'ho provato</strong>, dalla Cantina al Diario con <strong>Stappa</strong>.
+      </p>
+
+      <ol class="souls">
+        {
+          souls.map((s) => (
+            <li class={`soul ${s.key}`}>
+              <div class="soul-head">
+                <h3>{s.name}</h3>
+                <span class="when">{s.when}</span>
+              </div>
+              <p>{s.body}</p>
+              <span class="action">{s.action}</span>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+    <img
+      class="shot"
+      src={`${base}screens/wishlist-dark.png`}
+      alt="La scheda Wishlist della Home con cinque vini e birre da provare"
+      width="390"
+      height="844"
+      loading="lazy"
+    />
+  </div>
+</section>
+
+<style>
+  .souls-inner {
+    display: grid;
+    gap: 3rem;
+    align-items: center;
+  }
+  .souls {
+    list-style: none;
+    padding: 0;
+    margin: 2.5rem 0 0;
+    display: grid;
+    gap: 1rem;
+  }
+  .soul {
+    --accent: var(--feccia);
+    position: relative;
+    padding: 1.25rem 1.25rem 1.25rem 1.5rem;
+    background: var(--doga);
+    border: 1px solid var(--linea);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  /* Filo di colore a sinistra: feccia per il Diario, rame per la Cantina, luppolo per la Wishlist. */
+  .soul::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 6px;
+    background: var(--accent);
+  }
+  .soul.cantina {
+    --accent: var(--rame);
+  }
+  .soul.wishlist {
+    --accent: var(--luppolo);
+  }
+  .soul-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    margin-bottom: 0.4rem;
+  }
+  h3 {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    line-height: 1;
+    color: var(--accent);
+  }
+  .when {
+    font-weight: 700;
+  }
+  p {
+    color: var(--cenere);
+  }
+  .action {
+    display: inline-block;
+    margin-top: 0.75rem;
+    padding: 0.2rem 0.75rem;
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    color: var(--accent);
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+  .shot {
+    width: min(300px, 80%);
+    margin: 0 auto;
+    border-radius: 30px;
+    border: 6px solid #0f0b09;
+    box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.9);
+  }
+  @media (min-width: 900px) {
+    .souls-inner {
+      grid-template-columns: 1.2fr 0.8fr;
+    }
+  }
+</style>

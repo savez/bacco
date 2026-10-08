@@ -6,6 +6,7 @@ import '../styles/global.css'
 
 import Nav from '../components/Nav.astro'
 import Hero from '../components/Hero.astro'
+import Souls from '../components/Souls.astro'
 import Features from '../components/Features.astro'
 import Rating from '../components/Rating.astro'
 import Privacy from '../components/Privacy.astro'
@@ -44,6 +45,7 @@ const ogImage = new URL(`${base}og.png`, Astro.site).href
     <main>
       <Hero />
       <div class="hoop"></div>
+      <Souls />
       <Features />
       <Rating />
       <Privacy />

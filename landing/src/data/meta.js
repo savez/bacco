@@ -5,7 +5,7 @@ export const meta = {
   appName: 'Bacco',
   tagline: 'Ogni bottiglia che apri, nel tuo registro.',
   description:
-    'PWA open source per tenere il registro personale di vini e birre: foto, punteggio, analisi organolettica e luoghi. Offline, i dati restano sul telefono.',
+    'PWA open source per vini e birre: il diario di quello che bevi, la cantina di casa e la wishlist di quello che vuoi provare. Offline, i dati restano sul telefono.',
   appUrl: 'https://bacco-8in8.onrender.com',
   githubUrl: repo,
   releasesUrl: `${repo}/releases`,
