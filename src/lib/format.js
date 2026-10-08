@@ -1,9 +1,11 @@
 /**
- * Tipo con sottocategoria e denominazione, es. "Vino · Rosso · DOCG".
- * @param {{type:string, subtype?:string|null, appellation?:string|null}} bottle
+ * Tipo con sottocategoria e denominazione, es. "Vino · Rosso · DOCG"; se il vino ha un
+ * vitigno questo prende il posto di "Vino", es. "Nebbiolo · Rosso · DOCG".
+ * @param {{type:string, subtype?:string|null, appellation?:string|null, grape?:string|null}} bottle
  */
 export function kindLabel(bottle, separator = ' · ') {
-  return [bottle.type === 'wine' ? 'Vino' : 'Birra', bottle.subtype, bottle.appellation]
+  const head = bottle.type === 'wine' ? bottle.grape || 'Vino' : 'Birra'
+  return [head, bottle.subtype, bottle.appellation]
     .filter(Boolean)
     .join(separator)
 }

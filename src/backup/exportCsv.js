@@ -28,6 +28,8 @@ const HEADER = [
   'contrassegno_di_stato',
   'aromi',
   'abbinamenti',
+  // Vitigno del vino (specs/004-vitigno).
+  'vitigno',
 ]
 
 function formatLocalDateTime(iso) {
@@ -87,6 +89,7 @@ export function buildCsv(bottles, photoCounts = {}) {
       bottle.stateSeal ?? '',
       (bottle.aromaTags ?? []).join(', '),
       (bottle.pairingTags ?? []).join(', '),
+      bottle.grape ?? '',
     ]
     lines.push(row.map(csvField).join(';'))
   }

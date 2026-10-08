@@ -308,3 +308,24 @@ describe('chip nel backup (SC-204)', () => {
     expect(await db.bottles.get(b.id)).toMatchObject({ aromaTags: ['Fruttato', 'Tannico'], pairingTags: ['Carne'] })
   })
 })
+
+describe('vitigno nel backup', () => {
+  it('esporta e reimporta il vitigno', async () => {
+    const b = await createBottle({ name: 'Timorasso Derthona', type: 'wine', rating: 4, grape: 'Timorasso' })
+    const file = new File([await buildBackupBlob()], 'backup.json', { type: 'application/json' })
+    await db.bottles.clear()
+    await db.cellarMoves.clear()
+    await importBackup(file, { makeThumbnail: fakeThumbnail })
+    expect((await db.bottles.get(b.id)).grape).toBe('Timorasso')
+  })
+
+  it('un backup senza vitigno si importa e lascia il vitigno vuoto', async () => {
+    const b = await createBottle({ name: 'Barolo', type: 'wine', rating: 4, grape: 'Nebbiolo' })
+    const data = JSON.parse(await new File([await buildBackupBlob()], 'b.json').text())
+    for (const entry of data.bottles) delete entry.grape
+    await db.bottles.clear()
+    await db.cellarMoves.clear()
+    await importBackup(jsonFile(data), { makeThumbnail: fakeThumbnail })
+    expect((await db.bottles.get(b.id)).grape ?? null).toBeNull()
+  })
+})

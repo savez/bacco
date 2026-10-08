@@ -59,6 +59,7 @@ describe('buildCsv', () => {
       'contrassegno_di_stato',
       'aromi',
       'abbinamenti',
+      'vitigno',
     ])
   })
 
@@ -146,7 +147,20 @@ describe('colonne dei chip', () => {
   it('aromi e abbinamenti separati da virgola', () => {
     const csv = buildCsv([bottle({ aromaTags: ['Tannico', 'Speziato'], pairingTags: ['Carne'] })], {})
     const header = csv.slice(1).split('\r\n')[0].split(';')
-    expect(header.slice(-2)).toEqual(['aromi', 'abbinamenti'])
-    expect(csv).toContain('Tannico, Speziato;Carne')
+    expect(header.slice(-3)).toEqual(['aromi', 'abbinamenti', 'vitigno'])
+    expect(csv).toContain('Tannico, Speziato;Carne;')
+  })
+})
+
+describe('colonna vitigno', () => {
+  it('piena per chi ce l’ha, vuota per gli altri e per la birra', () => {
+    const csv = buildCsv(
+      [bottle({ name: 'Barolo', grape: 'Nebbiolo' }), bottle({ name: 'Senza' }), bottle({ name: 'Tipopils', type: 'beer', grape: null })],
+      {},
+    )
+    const out = rows(csv)
+    expect(out.find((r) => r.nome === 'Barolo').vitigno).toBe('Nebbiolo')
+    expect(out.find((r) => r.nome === 'Senza').vitigno).toBe('')
+    expect(out.find((r) => r.nome === 'Tipopils').vitigno).toBe('')
   })
 })
