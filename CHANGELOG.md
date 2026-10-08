@@ -4,6 +4,14 @@ Tutte le modifiche rilevanti del progetto sono documentate in questo file, gener
 [release-please](https://github.com/googleapis/release-please) a partire dai
 [Conventional Commits](https://www.conventionalcommits.org/it/).
 
+## [1.6.0](https://github.com/savez/bacco/compare/v1.5.0...v1.6.0) (2026-10-08)
+
+
+### ✨ Novità
+
+* wishlist dei vini e delle birre da provare ([e4ac831](https://github.com/savez/bacco/commit/e4ac8312cd9423eb5cbe46042544a202877fa953))
+* wishlist dei vini e delle birre da provare ([5c94556](https://github.com/savez/bacco/commit/5c94556a28a3a9a8a732ef8c6c81addb12f823f4))
+
 ## [1.5.0](https://github.com/savez/bacco/compare/v1.4.0...v1.5.0) (2026-10-08)
 
 
