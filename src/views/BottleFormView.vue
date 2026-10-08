@@ -7,7 +7,7 @@ import { keepValidAromas } from '../lib/tastingTags.js'
 import PhotoPicker from '../components/PhotoPicker.vue'
 import PermissionHelp from '../components/PermissionHelp.vue'
 import { explainLocationError } from '../lib/permissions.js'
-import { createBottle, updateBottle, getBottle, getSuggestions, findSameLabel } from '../db/bottles.js'
+import { createBottle, updateBottle, getBottle, findSameLabel } from '../db/bottles.js'
 import { addToCellar } from '../db/cellar.js'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import { listPhotos, photoUrl } from '../db/photos.js'
@@ -106,7 +106,6 @@ const duplicateMessage = computed(() => {
 })
 const loading = ref(isEdit)
 const notFound = ref(false)
-const suggestions = ref({ names: [], producers: [] })
 const fieldRefs = ref({})
 const photos = ref([])
 let originalPhotoIds = []
@@ -195,9 +194,6 @@ function onRemoveLocation() {
 
 // --- Caricamento e salvataggio -----------------------------------------------------
 onMounted(async () => {
-  getSuggestions().then((s) => {
-    suggestions.value = s
-  })
   if (!isEdit) {
     // Da "L'ho provato": i dati del desiderio come punto di partenza. Un desiderio che non c'è
     // più (già provato, link vecchio) lascia il modulo vuoto, senza errori.
@@ -492,20 +488,17 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
             v-model="form.name"
             type="text"
             autocomplete="off"
-            list="name-suggestions"
             :class="inputClass"
             :aria-invalid="!!errors.name"
             :aria-describedby="errors.name ? 'name-error' : undefined"
           />
-          <datalist id="name-suggestions">
-            <option v-for="n in suggestions.names" :key="n" :value="n" />
-          </datalist>
           <p v-if="errors.name" id="name-error" class="mt-1 text-sm text-feccia">{{ errors.name }}</p>
         </div>
 
         <div>
           <label for="producer" class="field-label">Produttore</label>
-          <!-- Campo di testo semplice: niente suggerimenti, che su iOS diventavano un menu a tendina. -->
+          <!-- Nome e produttore sono campi di testo semplici: niente suggerimenti, che su iOS
+               diventavano un menu a tendina. -->
           <input id="producer" v-model="form.producer" type="text" autocomplete="off" :class="inputClass" />
         </div>
 
