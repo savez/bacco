@@ -10,7 +10,7 @@ import FirstTastingDialog from '../components/FirstTastingDialog.vue'
 import { useUncork } from '../composables/useUncork.js'
 import { liveBottles } from '../db/bottles.js'
 import { useLiveQuery } from '../composables/useLiveQuery.js'
-import { filterBottles, filterWishes, groupByMonth, availableYears, availableMonths, cellarSummary, tastedDate } from '../lib/search.js'
+import { filterBottles, filterWishes, availableSubtypes, groupByMonth, availableYears, availableMonths, cellarSummary, tastedDate } from '../lib/search.js'
 import { db } from '../db/db.js'
 import { photoUrl, revokePhotoUrl } from '../db/photos.js'
 
@@ -23,6 +23,8 @@ const sharing = ref(null)
 // --- Filtri ---------------------------------------------------------------------------
 const query = ref('')
 const type = ref(null)
+// Tipologia (sottocategoria: Rosso, IPA…) in Diario e Cantina; la Wishlist non ce l'ha.
+const subtype = ref(null)
 // Schede Diario | Cantina | Wishlist (specs/003-cantina-viva-ui, specs/005-wishlist). Si riapre
 // l'ultima scheda usata su questo dispositivo; dopo un salvataggio si apre la scheda chiesta dal
 // modulo (homeFilter.js), che diventa anche l'ultima usata.
@@ -65,9 +67,17 @@ watch(year, () => {
   if (month.value && !months.value.includes(month.value)) month.value = null
 })
 
-// Anno e Mese valgono solo nel Diario: in Cantina e Wishlist non contano come filtri attivi.
+// Anno e Mese valgono solo nel Diario, la Tipologia in Diario e Cantina: dove non si vedono non
+// contano come filtri attivi.
 const diary = computed(() => tab.value === 'diario')
-const filtersActive = computed(() => !!(query.value || type.value || (diary.value && (year.value || month.value))))
+const filtersActive = computed(
+  () => !!(query.value || type.value || (!wishlist.value && subtype.value) || (diary.value && (year.value || month.value))),
+)
+const subtypeGroups = computed(() => availableSubtypes(bottles.value, { type: type.value, cellar: cellar.value }))
+// Una tipologia che non c'è più nella scheda o nel tipo scelto (es. "IPA" passando a Vino) si azzera.
+watch(subtypeGroups, (groups) => {
+  if (!wishlist.value && subtype.value && !groups.some((g) => g.subtypes.includes(subtype.value))) subtype.value = null
+})
 const filteredWishes = computed(() => filterWishes(wishes.value, { query: query.value, type: type.value }))
 // Le schede si vedono sempre (anche senza bottiglie si arriva alla Wishlist); ricerca e filtri
 // solo se la scheda ha qualcosa da filtrare.
@@ -78,6 +88,7 @@ const filtered = computed(() =>
   filterBottles(bottles.value, {
     query: query.value,
     type: type.value,
+    subtype: subtype.value,
     year: year.value,
     month: month.value,
     cellar: cellar.value,
@@ -95,6 +106,7 @@ const { tastingFor, uncorkBottle, saveTasting, later } = useUncork()
 function resetFilters() {
   query.value = ''
   type.value = null
+  subtype.value = null
   year.value = null
   month.value = null
 }
@@ -245,9 +257,36 @@ const chipOff = 'border-rame/30 text-cenere'
             Birra
           </button>
         </div>
-        <span v-if="diary" class="h-6 w-px shrink-0 bg-rame/30" aria-hidden="true"></span>
+        <span v-if="!wishlist && (subtypeGroups.length > 0 || subtype)" class="h-6 w-px shrink-0 bg-rame/30" aria-hidden="true"></span>
         <!-- Menu nativi senza aspetto di sistema (Safari ignorerebbe forma e altezza): stessi
              chip di Vino/Birra, con una freccia nostra. Il menu che si apre resta quello del sistema. -->
+        <label v-if="!wishlist && (subtypeGroups.length > 0 || subtype)" class="relative shrink-0">
+          <span class="sr-only">Tipologia</span>
+          <select
+            :value="subtype ?? ''"
+            :class="[chipBase, 'appearance-none pr-9', subtype ? 'border-rame bg-rame text-doga' : `${chipOff} bg-transparent`]"
+            @change="subtype = $event.target.value || null"
+          >
+            <option value="">Tipologia</option>
+            <optgroup v-for="g in subtypeGroups" :key="g.type" :label="g.label">
+              <option v-for="s in g.subtypes" :key="s" :value="s">{{ s }}</option>
+            </optgroup>
+          </select>
+          <svg
+            viewBox="0 0 24 24"
+            class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2"
+            :class="subtype ? 'text-doga' : 'text-cenere'"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </label>
+        <span v-if="diary" class="h-6 w-px shrink-0 bg-rame/30" aria-hidden="true"></span>
         <label v-for="f in periodFilters" v-show="diary" :key="f.key" class="relative shrink-0">
           <span class="sr-only">{{ f.label }}</span>
           <select

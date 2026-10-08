@@ -505,10 +505,8 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
 
         <div>
           <label for="producer" class="field-label">Produttore</label>
-          <input id="producer" v-model="form.producer" type="text" list="producer-suggestions" :class="inputClass" />
-          <datalist id="producer-suggestions">
-            <option v-for="p in suggestions.producers" :key="p" :value="p" />
-          </datalist>
+          <!-- Campo di testo semplice: niente suggerimenti, che su iOS diventavano un menu a tendina. -->
+          <input id="producer" v-model="form.producer" type="text" autocomplete="off" :class="inputClass" />
         </div>
 
         <div class="grid grid-cols-2 gap-3">
