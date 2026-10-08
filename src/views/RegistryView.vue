@@ -185,6 +185,13 @@ const tabClass = (on) =>
 
 const chipBase = 'inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-full border px-4 text-sm font-bold'
 const chipOff = 'border-rame/30 text-cenere'
+const typeChipClass = computed(() =>
+  type.value === 'wine'
+    ? 'border-feccia bg-feccia text-botte'
+    : type.value === 'beer'
+      ? 'border-luppolo bg-luppolo text-doga'
+      : `${chipOff} bg-transparent`,
+)
 </script>
 
 <template>
@@ -236,30 +243,37 @@ const chipOff = 'border-rame/30 text-cenere'
         </button>
       </div>
 
-      <!-- Tutti i filtri in una riga sola, scorrevole: lascia lo schermo all'elenco. -->
+      <!-- Tutti i filtri in una riga sola, scorrevole: lascia lo schermo all'elenco. Sono menu nativi
+           senza aspetto di sistema (Safari ignorerebbe forma e altezza), a forma di chip e con una
+           freccia nostra; il menu che si apre resta quello del sistema. -->
       <div class="-mx-4 mt-3 flex items-center gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
-        <!-- Interruttori: tocca Vino per filtrare, ritoccalo per tornare a tutte le bottiglie. -->
-        <div role="group" aria-label="Filtra per tipo" class="flex shrink-0 gap-2">
-          <button
-            type="button"
-            :aria-pressed="type === 'wine'"
-            :class="[chipBase, type === 'wine' ? 'border-feccia bg-feccia text-botte' : chipOff]"
-            @click="type = type === 'wine' ? null : 'wine'"
+        <!-- Tipo: menu come Tipologia, Anno e Mese; acceso del colore del vino o della birra. -->
+        <label class="relative shrink-0">
+          <span class="sr-only">Tipo</span>
+          <select
+            :value="type ?? ''"
+            :class="[chipBase, 'appearance-none pr-9', typeChipClass]"
+            @change="type = $event.target.value || null"
           >
-            Vino
-          </button>
-          <button
-            type="button"
-            :aria-pressed="type === 'beer'"
-            :class="[chipBase, type === 'beer' ? 'border-luppolo bg-luppolo text-doga' : chipOff]"
-            @click="type = type === 'beer' ? null : 'beer'"
+            <option value="">Tipo</option>
+            <option value="wine">Vino</option>
+            <option value="beer">Birra</option>
+          </select>
+          <svg
+            viewBox="0 0 24 24"
+            class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2"
+            :class="type === 'wine' ? 'text-botte' : type === 'beer' ? 'text-doga' : 'text-cenere'"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
           >
-            Birra
-          </button>
-        </div>
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </label>
         <span v-if="!wishlist && (subtypeGroups.length > 0 || subtype)" class="h-6 w-px shrink-0 bg-rame/30" aria-hidden="true"></span>
-        <!-- Menu nativi senza aspetto di sistema (Safari ignorerebbe forma e altezza): stessi
-             chip di Vino/Birra, con una freccia nostra. Il menu che si apre resta quello del sistema. -->
         <label v-if="!wishlist && (subtypeGroups.length > 0 || subtype)" class="relative shrink-0">
           <span class="sr-only">Tipologia</span>
           <select

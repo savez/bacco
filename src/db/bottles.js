@@ -145,26 +145,6 @@ export function liveBottles() {
 }
 
 /**
- * Nomi e produttori già usati, ordinati per frequenza (FR-007). Usati per i
- * suggerimenti in fase di inserimento.
- */
-export async function getSuggestions() {
-  const all = await db.bottles.toArray()
-  const countBy = (values) => {
-    const counts = new Map()
-    for (const value of values) {
-      if (!value) continue
-      counts.set(value, (counts.get(value) ?? 0) + 1)
-    }
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([value]) => value)
-  }
-  return {
-    names: countBy(all.map((b) => b.name)),
-    producers: countBy(all.map((b) => b.producer)),
-  }
-}
-
-/**
  * Etichetta già registrata (FR-110): stesso nome, produttore e annata (senza badare ad
  * accenti e maiuscole). Serve a evitare doppioni.
  * @param {{name?: string, producer?: string|null, vintage?: number|null}} label
