@@ -4,6 +4,20 @@ Tutte le modifiche rilevanti del progetto sono documentate in questo file, gener
 [release-please](https://github.com/googleapis/release-please) a partire dai
 [Conventional Commits](https://www.conventionalcommits.org/it/).
 
+## [1.9.0](https://github.com/savez/bacco/compare/v1.8.0...v1.9.0) (2026-10-08)
+
+
+### ✨ Novità
+
+* selettore − N + nella sezione Cantina della scheda, al posto di "Aggiungi" e "Correggi quantità": ogni tocco salva, con Annulla ([#24](https://github.com/savez/bacco/issues/24)) ([d2d45bc](https://github.com/savez/bacco/commit/d2d45bcac041396213ca56eb4b48328f363a2273))
+* azioni della scheda su una riga: Stappa o "Metti in cantina" a parole, Modifica, Elimina e Condividi come icone; stesso schema nella Wishlist ([#24](https://github.com/savez/bacco/issues/24)) ([d2d45bc](https://github.com/savez/bacco/commit/d2d45bcac041396213ca56eb4b48328f363a2273))
+* righe di Diario e Cantina più pulite, senza i pulsanti Stappa e Condividi ([#24](https://github.com/savez/bacco/issues/24)) ([d2d45bc](https://github.com/savez/bacco/commit/d2d45bcac041396213ca56eb4b48328f363a2273))
+
+
+### 🐛 Correzioni
+
+* il filtro Tipologia si vede sempre in Diario e Cantina, anche se nessuna bottiglia ha ancora una tipologia ([#24](https://github.com/savez/bacco/issues/24)) ([d2d45bc](https://github.com/savez/bacco/commit/d2d45bcac041396213ca56eb4b48328f363a2273))
+
 ## [1.8.0](https://github.com/savez/bacco/compare/v1.7.0...v1.8.0) (2026-10-08)
 
 
