@@ -3,6 +3,8 @@ import RegistryView from './views/RegistryView.vue'
 import BottleFormView from './views/BottleFormView.vue'
 import BottleDetailView from './views/BottleDetailView.vue'
 import SettingsView from './views/SettingsView.vue'
+import WishFormView from './views/WishFormView.vue'
+import WishDetailView from './views/WishDetailView.vue'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -20,14 +22,36 @@ export const router = createRouter({
       name: 'bottle-detail',
       component: BottleDetailView,
       props: true,
-      meta: { modal: true },
+      meta: { modal: true, sheetLabel: 'Dettaglio bottiglia' },
     },
     {
       path: '/bottiglia/:id/modifica',
       name: 'bottle-edit',
       component: BottleFormView,
       props: true,
-      meta: { modal: true },
+      meta: { modal: true, sheetLabel: 'Modifica bottiglia' },
+    },
+    // Wishlist (specs/005-wishlist): nuovo, dettaglio e modifica nel pannello modale sopra la Home.
+    // "nuovo" prima di ":id", altrimenti sarebbe letto come un id.
+    {
+      path: '/desiderio/nuovo',
+      name: 'wish-new',
+      component: WishFormView,
+      meta: { modal: true, sheetLabel: 'Nuovo desiderio' },
+    },
+    {
+      path: '/desiderio/:id',
+      name: 'wish-detail',
+      component: WishDetailView,
+      props: true,
+      meta: { modal: true, sheetLabel: 'Dettaglio desiderio' },
+    },
+    {
+      path: '/desiderio/:id/modifica',
+      name: 'wish-edit',
+      component: WishFormView,
+      props: true,
+      meta: { modal: true, sheetLabel: 'Modifica desiderio' },
     },
     {
       path: '/mappa',

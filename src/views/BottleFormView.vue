@@ -17,8 +17,9 @@ import { RED_GRAPES, WHITE_GRAPES, GRAPE_MAX, isListedGrape } from '../lib/grape
 import { toDateAndTime, fromDateAndTime } from '../lib/format.js'
 import { showBanner } from '../composables/useBanner.js'
 import { withTimeout } from '../lib/timeout.js'
-import { requestCellarFilter } from '../lib/homeFilter.js'
+import { requestHomeTab } from '../lib/homeFilter.js'
 import { closeSheet } from '../composables/useSheet.js'
+import { getWish } from '../db/wishes.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -109,6 +110,8 @@ const suggestions = ref({ names: [], producers: [] })
 const fieldRefs = ref({})
 const photos = ref([])
 let originalPhotoIds = []
+// "L'ho provato" (specs/005-wishlist): desiderio da cui nasce la bottiglia, tolto al salvataggio.
+let fromWishId = null
 
 function setFieldRef(key) {
   return (el) => {
@@ -195,7 +198,23 @@ onMounted(async () => {
   getSuggestions().then((s) => {
     suggestions.value = s
   })
-  if (!isEdit) return
+  if (!isEdit) {
+    // Da "L'ho provato": i dati del desiderio come punto di partenza. Un desiderio che non c'è
+    // più (già provato, link vecchio) lascia il modulo vuoto, senza errori.
+    const wish = route.query.desiderio ? await getWish(String(route.query.desiderio)) : null
+    if (wish) {
+      fromWishId = wish.id
+      Object.assign(form, {
+        type: wish.type,
+        name: wish.name,
+        producer: wish.producer ?? '',
+        vintage: wish.vintage ? String(wish.vintage) : '',
+        notes: wish.notes ?? '',
+        externalUrl: wish.externalUrl ?? '',
+      })
+    }
+    return
+  }
 
   const existing = await getBottle(route.params.id)
   if (!existing) {
@@ -274,13 +293,15 @@ async function onSubmit({ allowDuplicate = false } = {}) {
           return
         }
       }
-      await withTimeout(createBottle(payload, { addPhotos }), SAVE_TIMEOUT_MS)
+      await withTimeout(createBottle(payload, { addPhotos, removeWishId: fromWishId }), SAVE_TIMEOUT_MS)
       if (toCellar.value) {
         showBanner({ id: 'bottle-saved', message: count === 1 ? 'In cantina: 1 bottiglia' : `In cantina: ${count} bottiglie`, priority: 30 })
-        requestCellarFilter()
+        requestHomeTab('cantina')
         router.push('/')
       } else {
         showBanner({ id: 'bottle-saved', message: 'Bottiglia salvata', priority: 30 })
+        // La bevuta appena salvata si vede nel Diario, qualunque scheda fosse aperta prima.
+        requestHomeTab('diario')
         router.push('/')
       }
     }
@@ -310,7 +331,7 @@ async function onAddToExisting() {
   const { match, count } = duplicate.value
   duplicate.value = null
   try {
-    await addToCellar(match.id, count)
+    await addToCellar(match.id, count, { removeWishId: fromWishId })
     showBanner({ id: 'bottle-saved', message: `Aggiunte ${count} bottiglie a ${match.name}`, priority: 30 })
     router.replace(`/bottiglia/${match.id}`)
   } catch (err) {

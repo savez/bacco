@@ -59,6 +59,31 @@ export function mergeLegacyTasting(aromas, taste) {
   return parts.join('\n')
 }
 
+/** Annata facoltativa (bottiglie e desideri): intero tra 1900 e l'anno corrente. */
+function checkVintage(raw, now, value, errors) {
+  if (raw === null || raw === undefined || raw === '') {
+    value.vintage = null
+    return
+  }
+  const vintage = Number(raw)
+  const currentYear = now.getFullYear()
+  if (!Number.isInteger(vintage) || vintage < 1900 || vintage > currentYear) {
+    errors.vintage = `L'annata deve essere tra 1900 e ${currentYear}.`
+  }
+  value.vintage = vintage
+}
+
+/** Link facoltativo alla scheda tecnica (bottiglie e desideri): solo https. */
+function checkExternalUrl(raw, value, errors) {
+  const url = cleanText(raw ?? '')
+  if (url.length === 0) {
+    value.externalUrl = null
+  } else {
+    if (!isHttpsUrl(url)) errors.externalUrl = 'Inserisci un link che inizi con https://'
+    value.externalUrl = url
+  }
+}
+
 function round5(n) {
   return Math.round(n * 1e5) / 1e5
 }
@@ -156,16 +181,7 @@ export function validateBottle(input, { now = new Date() } = {}) {
     value.abv = Math.round(abv * 10) / 10
   }
 
-  if (data.vintage === null || data.vintage === undefined || data.vintage === '') {
-    value.vintage = null
-  } else {
-    const vintage = Number(data.vintage)
-    const currentYear = now.getFullYear()
-    if (!Number.isInteger(vintage) || vintage < 1900 || vintage > currentYear) {
-      errors.vintage = `L'annata deve essere tra 1900 e ${currentYear}.`
-    }
-    value.vintage = vintage
-  }
+  checkVintage(data.vintage, now, value, errors)
 
   // Un'etichetta "da assaggiare" (tastedAt === null, in cantina e mai stappata) non ha
   // ancora punteggio: lo riceve al primo stappo. Tutte le altre lo richiedono.
@@ -230,15 +246,7 @@ export function validateBottle(input, { now = new Date() } = {}) {
     value.barcode = barcodeRaw
   }
 
-  const externalUrlRaw = cleanText(data.externalUrl ?? '')
-  if (externalUrlRaw.length === 0) {
-    value.externalUrl = null
-  } else if (!isHttpsUrl(externalUrlRaw)) {
-    errors.externalUrl = 'Inserisci un link che inizi con https://'
-    value.externalUrl = externalUrlRaw
-  } else {
-    value.externalUrl = externalUrlRaw
-  }
+  checkExternalUrl(data.externalUrl, value, errors)
 
   if (data.location === null || data.location === undefined) {
     value.location = null
@@ -267,6 +275,41 @@ export function validateBottle(input, { now = new Date() } = {}) {
     return { ok: false, errors }
   }
   return { ok: true, value }
+}
+
+/**
+ * Desiderio della wishlist (specs/005-wishlist/data-model.md): stesse regole dei campi omonimi
+ * della bottiglia, così "L'ho provato" passa dati già validi al modulo della bottiglia. Usato da
+ * src/db/wishes.js e dall'importazione del backup.
+ * @param {object} input
+ * @param {{now?: Date}} [opts]
+ * @returns {{ok: true, value: object} | {ok: false, errors: Record<string,string>}}
+ */
+export function validateWish(input, { now = new Date() } = {}) {
+  const errors = {}
+  const value = {}
+  const data = input && typeof input === 'object' ? input : {}
+
+  if (data.type !== 'wine' && data.type !== 'beer') errors.type = 'Scegli vino o birra.'
+  value.type = data.type
+
+  const name = cleanText(data.name)
+  if (name.length < 1 || name.length > NAME_MAX) errors.name = `Il nome deve avere tra 1 e ${NAME_MAX} caratteri.`
+  value.name = name
+
+  const producer = cleanText(data.producer ?? '')
+  if (producer.length > NAME_MAX) errors.producer = `Il produttore può avere al massimo ${NAME_MAX} caratteri.`
+  value.producer = producer.length > 0 ? producer : null
+
+  checkVintage(data.vintage, now, value, errors)
+
+  const notes = cleanText(data.notes ?? '')
+  if (notes.length > NOTES_MAX) errors.notes = `Le note possono avere al massimo ${NOTES_MAX} caratteri.`
+  value.notes = notes
+
+  checkExternalUrl(data.externalUrl, value, errors)
+
+  return Object.keys(errors).length > 0 ? { ok: false, errors } : { ok: true, value }
 }
 
 /**

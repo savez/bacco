@@ -58,6 +58,23 @@ export function filterBottles(bottles, { query, type, year, month, cellar = fals
     .sort(cellar ? byCellarDesc : byTastedDesc)
 }
 
+/**
+ * Scheda Wishlist (specs/005-wishlist): dal desiderio aggiunto più di recente; la ricerca
+ * guarda anche le note, dove c'è chi l'ha consigliato.
+ * @param {object[]} wishes
+ * @param {{query?: string, type?: 'wine'|'beer'|null}} filters
+ */
+export function filterWishes(wishes, { query, type } = {}) {
+  const needle = query ? normalizeText(query) : ''
+  return wishes
+    .filter((w) => {
+      if (type && w.type !== type) return false
+      if (!needle) return true
+      return [w.name, w.producer, w.notes].some((text) => normalizeText(text ?? '').includes(needle))
+    })
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
 /** Riepilogo della cantina: etichette e bottiglie in casa. @param {object[]} list */
 export function cellarSummary(list) {
   return { labels: list.length, bottles: list.reduce((sum, b) => sum + (b.cellarCount ?? 0), 0) }

@@ -137,10 +137,13 @@ async function onFileChosen(event) {
   if (!file) return
   importing.value = true
   try {
-    const { added, updated, unchanged } = await importBackup(file, { makeThumbnail })
+    const { added, updated, unchanged, wishes } = await importBackup(file, { makeThumbnail })
+    // Wishlist (specs/005-wishlist): citata solo se il backup ha portato desideri nuovi o aggiornati.
+    const wishCount = wishes.added + wishes.updated
+    const wishPart = wishCount > 0 ? ` · ${wishCount} ${wishCount === 1 ? 'desiderio' : 'desideri'}` : ''
     showBanner({
       id: 'import-done',
-      message: `Importate: ${added} nuove, ${updated} aggiornate, ${unchanged} invariate.`,
+      message: `Importate: ${added} nuove, ${updated} aggiornate, ${unchanged} invariate${wishPart}.`,
       priority: 30,
     })
   } catch (err) {
@@ -164,6 +167,7 @@ async function onSecondConfirm() {
   await db.bottles.clear()
   await db.photos.clear()
   await db.cellarMoves.clear()
+  await db.wishes.clear()
   await db.settings.clear()
   try {
     localStorage.clear()
@@ -280,7 +284,7 @@ async function onSecondConfirm() {
     <section class="mt-8 rounded-md border border-feccia/40 p-3">
       <h2 class="font-display text-lg uppercase tracking-wide text-feccia">Elimina tutti i dati</h2>
       <p class="mt-1 text-sm text-cenere">
-        Cancella definitivamente tutte le bottiglie, le foto e le impostazioni da questo dispositivo.
+        Cancella definitivamente tutte le bottiglie, le foto, la wishlist e le impostazioni da questo dispositivo.
       </p>
       <button
         type="button"
@@ -355,7 +359,7 @@ async function onSecondConfirm() {
     <ConfirmDialog
       :open="deleteConfirmOpen"
       title="Elimina tutti i dati"
-      message="Verranno eliminate tutte le bottiglie, le foto e le impostazioni. Continuare?"
+      message="Verranno eliminate tutte le bottiglie, le foto, la wishlist e le impostazioni. Continuare?"
       confirm-label="Continua"
       danger
       @confirm="onFirstConfirm"

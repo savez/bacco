@@ -22,10 +22,12 @@ export class ValidationError extends Error {
 }
 
 /**
+ * `removeWishId`: la bottiglia nasce da "L'ho provato" (specs/005-wishlist) e il desiderio si
+ * toglie nella stessa transazione: o entrambe le cose o nessuna.
  * @param {object} input
- * @param {{addPhotos?: {blob: Blob, thumb: Blob}[]}} [opts]
+ * @param {{addPhotos?: {blob: Blob, thumb: Blob}[], removeWishId?: string|null}} [opts]
  */
-export async function createBottle(input, { addPhotos = [] } = {}) {
+export async function createBottle(input, { addPhotos = [], removeWishId = null } = {}) {
   const result = validateBottle(input)
   if (!result.ok) throw new ValidationError(result.errors)
   const now = new Date().toISOString()
@@ -36,9 +38,10 @@ export async function createBottle(input, { addPhotos = [] } = {}) {
   const moves = [move(bottle.id, 'first', { at: registeredAt })]
   if (bottle.cellarCount > 0) moves.push(move(bottle.id, 'in', { qty: bottle.cellarCount, at: registeredAt }))
 
-  await db.transaction('rw', db.bottles, db.photos, db.cellarMoves, async () => {
+  await db.transaction('rw', db.bottles, db.photos, db.cellarMoves, db.wishes, async () => {
     await db.bottles.put(bottle)
     await db.cellarMoves.bulkAdd(moves)
+    if (removeWishId) await db.wishes.delete(removeWishId)
     await Promise.all(
       addPhotos.map((photo, order) =>
         db.photos.put({

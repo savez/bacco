@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateBottle, validateMove, isValidBarcode, isHttpsUrl } from '../../src/lib/validate.js'
+import { validateBottle, validateMove, validateWish, isValidBarcode, isHttpsUrl } from '../../src/lib/validate.js'
 
 const base = () => ({
   name: 'Barolo Cannubi',
@@ -353,5 +353,59 @@ describe('vitigno', () => {
     const res = validateBottle({ name: 'Tipopils', type: 'beer', rating: 4, grape: 'Nebbiolo' })
     expect(res.ok).toBe(true)
     expect(res.value.grape).toBeNull()
+  })
+})
+
+describe('validateWish', () => {
+  const now = new Date('2026-10-08T12:00:00Z')
+  const wish = (extra = {}) => validateWish({ type: 'wine', name: 'Timorasso', ...extra }, { now })
+
+  it('accetta tipo e nome soltanto', () => {
+    const res = wish()
+    expect(res).toEqual({
+      ok: true,
+      value: { type: 'wine', name: 'Timorasso', producer: null, vintage: null, notes: '', externalUrl: null },
+    })
+  })
+
+  it('ripulisce gli spazi e conserva gli a capo delle note', () => {
+    const res = wish({ name: '  Timorasso  ', producer: ' Vigneti Massa ', notes: ' Consigliato da Marco\nminerale ' })
+    expect(res.value).toMatchObject({ name: 'Timorasso', producer: 'Vigneti Massa', notes: 'Consigliato da Marco\nminerale' })
+  })
+
+  it('richiede il nome e ne limita la lunghezza', () => {
+    expect(wish({ name: '' }).errors.name).toBeTruthy()
+    expect(wish({ name: '   ' }).errors.name).toBeTruthy()
+    expect(wish({ name: 'x'.repeat(121) }).errors.name).toBeTruthy()
+    expect(wish({ name: 'x'.repeat(120) }).ok).toBe(true)
+  })
+
+  it('richiede vino o birra', () => {
+    expect(validateWish({ name: 'Timorasso' }, { now }).errors.type).toBeTruthy()
+    expect(wish({ type: 'beer' }).ok).toBe(true)
+  })
+
+  it('limita il produttore a 120 caratteri', () => {
+    expect(wish({ producer: 'x'.repeat(121) }).errors.producer).toBeTruthy()
+    expect(wish({ producer: '' }).value.producer).toBeNull()
+  })
+
+  it('accetta l\'annata tra 1900 e l\'anno corrente', () => {
+    expect(wish({ vintage: '2021' }).value.vintage).toBe(2021)
+    expect(wish({ vintage: '' }).value.vintage).toBeNull()
+    expect(wish({ vintage: 1899 }).errors.vintage).toBeTruthy()
+    expect(wish({ vintage: 2027 }).errors.vintage).toBeTruthy()
+    expect(wish({ vintage: 2026 }).ok).toBe(true)
+  })
+
+  it('limita le note a 5000 caratteri', () => {
+    expect(wish({ notes: 'x'.repeat(5001) }).errors.notes).toBeTruthy()
+    expect(wish({ notes: 'x'.repeat(5000) }).ok).toBe(true)
+  })
+
+  it('accetta solo link https', () => {
+    expect(wish({ externalUrl: 'http://x.it' }).errors.externalUrl).toBeTruthy()
+    expect(wish({ externalUrl: 'ciao' }).errors.externalUrl).toBeTruthy()
+    expect(wish({ externalUrl: ' https://x.it/a ' }).value.externalUrl).toBe('https://x.it/a')
   })
 })

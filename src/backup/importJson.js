@@ -1,9 +1,10 @@
 import { db } from '../db/db.js'
-import { validateBottle, validateMove } from '../lib/validate.js'
+import { validateBottle, validateMove, validateWish } from '../lib/validate.js'
 import { move } from '../db/bottles.js'
 
 const MAX_SIZE = 300 * 1024 * 1024
-// v1: solo bottiglie (Bacco 1.0); v2: anche cantina e movimenti (specs/002-cellar-inventory).
+// v1: solo bottiglie (Bacco 1.0); v2: anche cantina e movimenti (specs/002-cellar-inventory) e,
+// facoltativa, la wishlist (`wishes`, specs/005-wishlist).
 const SUPPORTED_FORMAT_VERSIONS = [1, 2]
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -120,6 +121,21 @@ export async function importBackup(file, { makeThumbnail } = {}) {
     })
   }
 
+  // Desideri della wishlist, validati come le bottiglie. Un backup senza `wishes` (precedente
+  // alla wishlist) non ne porta e lascia quelli presenti come sono.
+  const wishes = (Array.isArray(data.wishes) ? data.wishes : []).map((entry, index) => {
+    if (!isUuid(entry?.id)) throw new Error(`Desiderio ${index + 1}: identificativo non valido.`)
+    if (!isIsoDate(entry.createdAt) || !isIsoDate(entry.updatedAt)) {
+      throw new Error(`Desiderio ${index + 1}: date non valide.`)
+    }
+    const result = validateWish(entry)
+    if (!result.ok) {
+      const [field, message] = Object.entries(result.errors)[0]
+      throw new Error(`Desiderio ${index + 1}, campo "${field}": ${message}`)
+    }
+    return { ...result.value, id: entry.id, createdAt: entry.createdAt, updatedAt: entry.updatedAt }
+  })
+
   // Fase 1 (fuori dalla transazione): decide cosa aggiungere/aggiornare/lasciare
   // invariato, e prepara in anticipo solo le foto che verranno davvero scritte.
   const ids = validated.map((v) => v.bottle.id)
@@ -142,10 +158,25 @@ export async function importBackup(file, { makeThumbnail } = {}) {
     }
   }
 
+  // Stessa regola di unione per i desideri: vince il record modificato più di recente.
+  const existingWishes = wishes.length > 0 ? await db.wishes.bulkGet(wishes.map((w) => w.id)) : []
+  const wishSummary = { added: 0, updated: 0, unchanged: 0 }
+  const wishesToWrite = wishes.filter((wish, i) => {
+    const existing = existingWishes[i]
+    if (!existing) wishSummary.added++
+    else if (wish.updatedAt > existing.updatedAt) wishSummary.updated++
+    else {
+      wishSummary.unchanged++
+      return false
+    }
+    return true
+  })
+
   // Fase 2: transazione Dexie pura (solo put/delete), senza altri await in mezzo.
   // I movimenti seguono il record che vince l'unione: così la quantità resta coerente con
   // il registro (contracts/backup-format.md di specs/002-cellar-inventory).
-  await db.transaction('rw', db.bottles, db.photos, db.cellarMoves, async () => {
+  await db.transaction('rw', db.bottles, db.photos, db.cellarMoves, db.wishes, async () => {
+    if (wishesToWrite.length > 0) await db.wishes.bulkPut(wishesToWrite)
     for (const { action, bottle, photoRows } of toWrite) {
       if (action === 'update') {
         await db.photos.where('bottleId').equals(bottle.id).delete()
@@ -158,5 +189,5 @@ export async function importBackup(file, { makeThumbnail } = {}) {
     }
   })
 
-  return summary
+  return { ...summary, wishes: wishSummary }
 }
