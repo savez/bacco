@@ -3,6 +3,7 @@
 // backup (src/backup/importJson.js).
 
 import { APPELLATIONS } from './subtypes.js'
+import { GRAPE_MAX, canonicalGrape } from './grapes.js'
 import { PAIRINGS, keepValidAromas, normalizeTags } from './tastingTags.js'
 
 const NAME_MAX = 120
@@ -118,6 +119,14 @@ export function validateBottle(input, { now = new Date() } = {}) {
   } else {
     value.stateSeal = stateSeal
   }
+
+  // Vitigno (specs/004-vitigno): solo per il vino; una voce d'elenco scritta a mano diventa
+  // la voce canonica, un testo libero resta com'è.
+  const grape = data.type === 'wine' ? canonicalGrape(data.grape) : null
+  if (grape && grape.length > GRAPE_MAX) {
+    errors.grape = `Il vitigno può avere al massimo ${GRAPE_MAX} caratteri.`
+  }
+  value.grape = grape
 
   const tasting = cleanText(data.tasting || mergeLegacyTasting(data.aromas, data.taste))
   if (tasting.length > TASTING_MAX) {

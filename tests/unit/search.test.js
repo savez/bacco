@@ -161,3 +161,20 @@ describe('ricerca su aromi e abbinamenti', () => {
     expect(filterBottles(cellar, { query: 'carne', cellar: true }).map((b) => b.name)).toEqual(['Barolo'])
   })
 })
+
+describe('ricerca per vitigno', () => {
+  const list = [
+    bottle({ name: 'Barolo', grape: 'Nebbiolo' }),
+    bottle({ name: 'Traminer', grape: 'Gewürztraminer' }),
+    bottle({ name: 'Senza vitigno' }),
+  ]
+  it('trova i vini per vitigno, senza badare a maiuscole e accenti', () => {
+    expect(filterBottles(list, { query: 'nebb' }).map((b) => b.name)).toEqual(['Barolo'])
+    expect(filterBottles(list, { query: 'NEBBIOLO' }).map((b) => b.name)).toEqual(['Barolo'])
+    expect(filterBottles(list, { query: 'gewurz' }).map((b) => b.name)).toEqual(['Traminer'])
+  })
+  it('anche nella cantina', () => {
+    const cellar = list.map((b) => ({ ...b, cellarCount: 1 }))
+    expect(filterBottles(cellar, { query: 'nebb', cellar: true }).map((b) => b.name)).toEqual(['Barolo'])
+  })
+})

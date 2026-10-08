@@ -322,3 +322,36 @@ describe('chip di aromi e abbinamenti', () => {
     expect(res.value.aromaTags).toEqual(['Luppolato', 'Fresco'])
   })
 })
+
+describe('vitigno', () => {
+  const wine = () => ({ name: 'Barolo', type: 'wine', rating: 4 })
+
+  it('assente → null', () => {
+    expect(validateBottle(wine()).value.grape).toBeNull()
+  })
+
+  it('una voce d’elenco scritta a mano diventa la voce canonica', () => {
+    expect(validateBottle({ ...wine(), grape: 'nebbiolo' }).value.grape).toBe('Nebbiolo')
+  })
+
+  it('un testo libero resta com’è', () => {
+    expect(validateBottle({ ...wine(), grape: 'Timorasso' }).value.grape).toBe('Timorasso')
+  })
+
+  it('solo spazi → null senza errore', () => {
+    const res = validateBottle({ ...wine(), grape: '   ' })
+    expect(res.ok).toBe(true)
+    expect(res.value.grape).toBeNull()
+  })
+
+  it('oltre 60 caratteri → errore', () => {
+    expect(validateBottle({ ...wine(), grape: 'A'.repeat(61) }).errors?.grape).toBeTruthy()
+    expect(validateBottle({ ...wine(), grape: 'A'.repeat(60) }).ok).toBe(true)
+  })
+
+  it('vale solo per il vino', () => {
+    const res = validateBottle({ name: 'Tipopils', type: 'beer', rating: 4, grape: 'Nebbiolo' })
+    expect(res.ok).toBe(true)
+    expect(res.value.grape).toBeNull()
+  })
+})

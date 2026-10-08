@@ -13,6 +13,7 @@ import ConfirmDialog from '../components/ConfirmDialog.vue'
 import { listPhotos, photoUrl } from '../db/photos.js'
 import { getCurrentLocation } from '../lib/geo.js'
 import { subtypesFor, APPELLATIONS } from '../lib/subtypes.js'
+import { RED_GRAPES, WHITE_GRAPES, GRAPE_MAX, isListedGrape } from '../lib/grapes.js'
 import { toDateAndTime, fromDateAndTime } from '../lib/format.js'
 import { showBanner } from '../composables/useBanner.js'
 import { withTimeout } from '../lib/timeout.js'
@@ -40,6 +41,7 @@ const form = reactive({
   type: null,
   subtype: '',
   appellation: '',
+  grape: '',
   rating: null,
   aromaTags: [],
   pairingTags: [],
@@ -133,6 +135,19 @@ function pickOther() {
   if (subtypeOptions.value.includes(form.subtype)) form.subtype = ''
 }
 
+// --- Vitigno (specs/004-vitigno) ---------------------------------------------------
+// Il menu vale `''` (nessuno), una voce dell'elenco o OTHER_GRAPE: con "Altro…" il vitigno
+// è il testo di `form.grape`.
+const OTHER_GRAPE = '__other__'
+const grapeChoice = ref('')
+const grapeOtherRef = ref(null)
+
+watch(grapeChoice, async (choice) => {
+  if (choice !== OTHER_GRAPE) return
+  await nextTick()
+  grapeOtherRef.value?.focus()
+})
+
 watch(
   () => form.type,
   (type, previous) => {
@@ -144,6 +159,8 @@ watch(
     if (type !== 'wine') {
       form.appellation = ''
       form.stateSeal = ''
+      form.grape = ''
+      grapeChoice.value = ''
     }
   },
 )
@@ -190,6 +207,8 @@ onMounted(async () => {
     if (key === 'consumedDate' || key === 'consumedTime') continue
     form[key] = existing[key] ?? (key === 'type' || key === 'rating' ? null : '')
   }
+  // Un vitigno fuori elenco si riapre come "Altro…" con il testo nel campo.
+  grapeChoice.value = !existing.grape ? '' : isListedGrape(existing.grape) ? existing.grape : OTHER_GRAPE
   form.vintage = existing.vintage ? String(existing.vintage) : ''
   form.abv = existing.abv != null ? String(existing.abv).replace('.', ',') : ''
   // Record precedenti alla migrazione v2 restano leggibili anche se non ancora riscritti.
@@ -230,6 +249,7 @@ async function onSubmit({ allowDuplicate = false } = {}) {
   const count = bottleCount.value
   const payload = {
     ...form,
+    grape: grapeChoice.value === OTHER_GRAPE ? form.grape : grapeChoice.value,
     vintage: form.vintage === '' ? null : Number(form.vintage),
     consumedAt: fromDateAndTime(form.consumedDate, form.consumedTime),
     location: location.value,
@@ -390,6 +410,57 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
             placeholder="Es. Saison, Orange wine"
             :class="inputClass"
           />
+        </div>
+
+        <div v-if="form.type === 'wine'">
+          <label for="grape" class="field-label">Vitigno</label>
+          <!-- Menu nativo senza aspetto di sistema (come Anno/Mese in Home): Safari ignorerebbe
+               forma e altezza. Il menu che si apre resta quello del sistema. -->
+          <div class="relative mt-1">
+            <select
+              id="grape"
+              v-model="grapeChoice"
+              :class="[inputClass, '!mt-0 appearance-none pr-10']"
+              :aria-invalid="!!errors.grape"
+            >
+              <option value="">—</option>
+              <optgroup label="Bacca nera">
+                <option v-for="g in RED_GRAPES" :key="g" :value="g">{{ g }}</option>
+              </optgroup>
+              <optgroup label="Bacca bianca">
+                <option v-for="g in WHITE_GRAPES" :key="g" :value="g">{{ g }}</option>
+              </optgroup>
+              <option :value="OTHER_GRAPE">Altro…</option>
+            </select>
+            <svg
+              viewBox="0 0 24 24"
+              class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cenere"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </div>
+          <template v-if="grapeChoice === OTHER_GRAPE">
+            <label for="grape-other" class="mt-3 block text-sm font-bold">Quale vitigno?</label>
+            <input
+              id="grape-other"
+              ref="grapeOtherRef"
+              v-model="form.grape"
+              type="text"
+              :maxlength="GRAPE_MAX"
+              autocomplete="off"
+              placeholder="Es. Timorasso, Merlot e Cabernet Franc"
+              :class="inputClass"
+              :aria-invalid="!!errors.grape"
+              :aria-describedby="errors.grape ? 'grape-error' : undefined"
+            />
+          </template>
+          <p v-if="errors.grape" id="grape-error" class="mt-1 text-sm text-feccia">{{ errors.grape }}</p>
         </div>
 
         <div>

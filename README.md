@@ -34,6 +34,8 @@ foto, punteggio, analisi organolettica, abbinamento, luogo e ricordi. Funziona o
 - 📷 **Foto** scattate dall'app o scelte dalla galleria.
 - 🍇 **Scheda completa**: sottocategoria (Rosso, Bianco, IPA, Stout…), denominazione
   (DOCG, DOC, IGT, IGP), annata, gradazione, analisi organolettica, abbinamento, note.
+- 🍷 **Vitigno** del vino: si sceglie da un elenco di vitigni comuni (a bacca nera e bianca) o,
+  con *Altro…*, si scrive a mano; compare nell'elenco e si trova con la ricerca.
 - 🏷️ **Contrassegno di Stato**: il codice della fascetta dei vini DOC e DOCG
   (es. ADK007842971), da verificare con l'app ufficiale *Trust your wine* del Poligrafico.
 - ⭐ **Punteggio da 1 a 5** con le bottiglie al posto delle stelle e una descrizione per ogni livello.
