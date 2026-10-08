@@ -4,6 +4,14 @@ Tutte le modifiche rilevanti del progetto sono documentate in questo file, gener
 [release-please](https://github.com/googleapis/release-please) a partire dai
 [Conventional Commits](https://www.conventionalcommits.org/it/).
 
+## [1.5.0](https://github.com/savez/bacco/compare/v1.4.0...v1.5.0) (2026-10-08)
+
+
+### ✨ Novità
+
+* vitigno del vino ([f9e1616](https://github.com/savez/bacco/commit/f9e16165f32a219dd6d35c7030a22a9b9df4386e))
+* vitigno del vino con menu a tendina e Altro ([566fb5d](https://github.com/savez/bacco/commit/566fb5da42fa2f195126a86aa8c9256132d48fbd))
+
 ## [1.4.0](https://github.com/savez/bacco/compare/v1.3.0...v1.4.0) (2026-10-07)
 
 
