@@ -10,11 +10,10 @@ const props = defineProps({
   // la lista dal componente padre: con molte bottiglie, interrogare il DB da
   // ogni riga singolarmente sarebbe lento (SC-005).
   coverUrl: { type: String, default: null },
-  // Scheda Cantina (specs/003-cantina-viva-ui): numero grande e pulsante Stappa al posto di
-  // punteggio e Condividi.
+  // Scheda Cantina (specs/003-cantina-viva-ui): numero grande al posto del punteggio. Stappa e
+  // Condividi stanno nella scheda della bottiglia, non nella riga.
   cellar: { type: Boolean, default: false },
 })
-const emit = defineEmits(['share', 'uncork'])
 
 // Sagome come in BottleIcon.vue (viewBox 24×48).
 const SILHOUETTE = {
@@ -33,7 +32,6 @@ const subtitle = computed(() =>
 </script>
 
 <template>
-  <!-- Il pulsante Condividi sta fuori dal link: un controllo dentro un link non è valido. -->
   <div class="flex items-center gap-1">
     <RouterLink :to="`/bottiglia/${bottle.id}`" class="flex min-h-16 min-w-0 flex-1 items-center gap-3 py-3">
       <span
@@ -64,27 +62,5 @@ const subtitle = computed(() =>
         </span>
       </span>
     </RouterLink>
-    <button
-      v-if="cellar && inCellar > 0"
-      type="button"
-      :aria-label="`Stappa una bottiglia di ${bottle.name}`"
-      class="min-h-11 shrink-0 rounded-full bg-feccia px-4 font-bold text-botte"
-      @click="emit('uncork', bottle)"
-    >
-      Stappa
-    </button>
-    <button
-      v-else-if="!cellar && !untasted"
-      type="button"
-      :aria-label="`Condividi ${bottle.name}`"
-      class="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-cenere hover:text-gesso"
-      @click="emit('share', bottle)"
-    >
-      <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />
-      </svg>
-    </button>
-    <!-- Stessa larghezza del pulsante Condividi, così le righe restano allineate. -->
-    <span v-else-if="!cellar" class="-mr-2 w-11 shrink-0" aria-hidden="true"></span>
   </div>
 </template>
