@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeText, filterBottles, groupByMonth, availableYears, availableMonths, cellarSummary, filterWishes } from '../../src/lib/search.js'
+import { normalizeText, filterBottles, groupByMonth, availableYears, availableMonths, cellarSummary, filterWishes, availableSubtypes } from '../../src/lib/search.js'
 
 describe('normalizeText', () => {
   it('rimuove accenti e porta in minuscolo', () => {
@@ -205,5 +205,34 @@ describe('filterWishes', () => {
 
   it('combina ricerca e tipo', () => {
     expect(filterWishes(wishes, { query: 'ti', type: 'beer' }).map((w) => w.id)).toEqual(['b'])
+  })
+})
+
+describe('filtro Tipologia (sottocategoria) di Diario e Cantina', () => {
+  const now = new Date().toISOString()
+  const list = [
+    bottle({ id: 'rosso', type: 'wine', subtype: 'Rosso', tastedAt: now }),
+    bottle({ id: 'bianco', type: 'wine', subtype: 'Bianco', tastedAt: now }),
+    bottle({ id: 'orange', type: 'wine', subtype: 'Orange', tastedAt: now }),
+    bottle({ id: 'ipa', type: 'beer', subtype: 'IPA', tastedAt: now }),
+    bottle({ id: 'senza', type: 'beer', subtype: null, tastedAt: now }),
+    bottle({ id: 'stout-cantina', type: 'beer', subtype: 'Stout', tastedAt: null, rating: null, cellarCount: 3 }),
+  ]
+  const ids = (l) => l.map((b) => b.id).sort()
+
+  it('filterBottles tiene solo la tipologia scelta, insieme al tipo', () => {
+    expect(ids(filterBottles(list, { subtype: 'Rosso' }))).toEqual(['rosso'])
+    expect(ids(filterBottles(list, { type: 'beer', subtype: 'IPA' }))).toEqual(['ipa'])
+    expect(ids(filterBottles(list, { cellar: true, subtype: 'Stout' }))).toEqual(['stout-cantina'])
+    expect(filterBottles(list, { subtype: 'Stout' })).toEqual([])
+  })
+
+  it('availableSubtypes elenca le tipologie della scheda, predefinite prima e libere dopo', () => {
+    expect(availableSubtypes(list)).toEqual([
+      { type: 'wine', label: 'Vino', subtypes: ['Rosso', 'Bianco', 'Orange'] },
+      { type: 'beer', label: 'Birra', subtypes: ['IPA'] },
+    ])
+    expect(availableSubtypes(list, { type: 'beer' })).toEqual([{ type: 'beer', label: 'Birra', subtypes: ['IPA'] }])
+    expect(availableSubtypes(list, { cellar: true })).toEqual([{ type: 'beer', label: 'Birra', subtypes: ['Stout'] }])
   })
 })
