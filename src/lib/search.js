@@ -82,9 +82,10 @@ export function filterWishes(wishes, { query, type } = {}) {
 }
 
 /**
- * Tipologie (sottocategorie) presenti nella scheda, per il filtro "Tipologia" di Diario e
- * Cantina: un gruppo per il vino e uno per la birra, solo quelli del tipo scelto se c'è. Prima
- * le tipologie predefinite nel loro ordine, poi quelle scritte a mano in ordine alfabetico.
+ * Tipologie (sottocategorie) per il filtro "Tipologia" di Diario e Cantina: un gruppo per il
+ * vino e uno per la birra, solo quello del tipo scelto se c'è. Sempre tutte le predefinite, nel
+ * loro ordine, così il filtro si vede anche se nessuna bottiglia ha ancora una tipologia; poi
+ * quelle scritte a mano presenti nella scheda, in ordine alfabetico.
  * @param {object[]} bottles
  * @param {{type?: 'wine'|'beer'|null, cellar?: boolean}} filters
  * @returns {{type: 'wine'|'beer', label: string, subtypes: string[]}[]}
@@ -101,9 +102,8 @@ export function availableSubtypes(bottles, { type = null, cellar = false } = {})
         bottles.filter((b) => b.type === groupType && b.subtype && inTab(b, cellar)).map((b) => b.subtype),
       )
       const custom = [...present].filter((s) => !predefined.includes(s)).sort((a, b) => a.localeCompare(b, 'it'))
-      return { type: groupType, label, subtypes: [...predefined.filter((s) => present.has(s)), ...custom] }
+      return { type: groupType, label, subtypes: [...predefined, ...custom] }
     })
-    .filter((g) => g.subtypes.length > 0)
 }
 
 /** Riepilogo della cantina: etichette e bottiglie in casa. @param {object[]} list */

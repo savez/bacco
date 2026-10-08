@@ -5,9 +5,6 @@ import { takeHomeTabRequest } from '../lib/homeFilter.js'
 import BottleRow from '../components/BottleRow.vue'
 import WishRow from '../components/WishRow.vue'
 import { liveWishes } from '../db/wishes.js'
-import ShareCardDialog from '../components/ShareCardDialog.vue'
-import FirstTastingDialog from '../components/FirstTastingDialog.vue'
-import { useUncork } from '../composables/useUncork.js'
 import { liveBottles } from '../db/bottles.js'
 import { useLiveQuery } from '../composables/useLiveQuery.js'
 import { filterBottles, filterWishes, availableSubtypes, groupByMonth, availableYears, availableMonths, cellarSummary, tastedDate } from '../lib/search.js'
@@ -16,9 +13,6 @@ import { photoUrl, revokePhotoUrl } from '../db/photos.js'
 
 const bottles = useLiveQuery(() => liveBottles(), [])
 const wishes = useLiveQuery(() => liveWishes(), [])
-
-// Bottiglia di cui si sta preparando la card di condivisione (un solo dialogo per tutta la lista).
-const sharing = ref(null)
 
 // --- Filtri ---------------------------------------------------------------------------
 const query = ref('')
@@ -99,9 +93,6 @@ const groups = computed(() => groupByMonth(filtered.value))
 const tasted = computed(() => bottles.value.filter((b) => tastedDate(b) !== null))
 const anyInCellar = computed(() => bottles.value.some((b) => (b.cellarCount ?? 0) > 0 || tastedDate(b) === null))
 const totalInCellar = computed(() => bottles.value.reduce((n, b) => n + (b.cellarCount ?? 0), 0))
-
-// Stappa dalla riga della cantina: Annulla e, al primo stappo, "Com'è?".
-const { tastingFor, uncorkBottle, saveTasting, later } = useUncork()
 
 function resetFilters() {
   query.value = ''
@@ -273,8 +264,8 @@ const typeChipClass = computed(() =>
             <path d="m6 9 6 6 6-6" />
           </svg>
         </label>
-        <span v-if="!wishlist && (subtypeGroups.length > 0 || subtype)" class="h-6 w-px shrink-0 bg-rame/30" aria-hidden="true"></span>
-        <label v-if="!wishlist && (subtypeGroups.length > 0 || subtype)" class="relative shrink-0">
+        <span v-if="!wishlist" class="h-6 w-px shrink-0 bg-rame/30" aria-hidden="true"></span>
+        <label v-if="!wishlist" class="relative shrink-0">
           <span class="sr-only">Tipologia</span>
           <select
             :value="subtype ?? ''"
@@ -397,7 +388,7 @@ const typeChipClass = computed(() =>
     <!-- Cantina: un elenco unico dall'ultima entrata, senza mesi. -->
     <ul v-else-if="cellar" class="divide-y divide-rame/10">
       <li v-for="bottle in filtered" :key="bottle.id">
-        <BottleRow cellar :bottle="bottle" :cover-url="coverUrls.get(bottle.id) ?? null" @uncork="uncorkBottle" />
+        <BottleRow cellar :bottle="bottle" :cover-url="coverUrls.get(bottle.id) ?? null" />
       </li>
     </ul>
 
@@ -410,19 +401,10 @@ const typeChipClass = computed(() =>
         </h2>
         <ul class="divide-y divide-rame/10">
           <li v-for="bottle in group.items" :key="bottle.id">
-            <BottleRow :bottle="bottle" :cover-url="coverUrls.get(bottle.id) ?? null" @share="sharing = $event" />
+            <BottleRow :bottle="bottle" :cover-url="coverUrls.get(bottle.id) ?? null" />
           </li>
         </ul>
       </section>
     </template>
-
-    <FirstTastingDialog
-      :open="!!tastingFor"
-      :name="tastingFor?.name ?? ''"
-      :type="tastingFor?.type ?? null"
-      @save="saveTasting"
-      @later="later"
-    />
-    <ShareCardDialog v-if="sharing" :key="sharing.id" :bottle="sharing" @close="sharing = null" />
   </div>
 </template>

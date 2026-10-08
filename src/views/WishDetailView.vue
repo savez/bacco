@@ -38,6 +38,8 @@ function onTried() {
   router.push({ name: 'bottle-new', query: { desiderio: props.id } })
 }
 
+const iconButton = 'flex h-12 w-11 shrink-0 items-center justify-center rounded-xl border'
+
 async function onDeleteConfirmed() {
   confirmOpen.value = false
   // Smette di seguire il record prima di cancellarlo: niente "non trovato" mentre il pannello si chiude.
@@ -75,25 +77,21 @@ async function onDeleteConfirmed() {
           Scheda tecnica ↗
         </a>
       </p>
-
-      <div class="mt-6 flex gap-3">
-        <RouterLink :to="`/desiderio/${wish.id}/modifica`" class="min-h-11 rounded-md border border-rame/30 px-4 py-2 font-bold">
-          Modifica
-        </RouterLink>
-        <button
-          type="button"
-          class="min-h-11 rounded-md border border-feccia px-4 py-2 font-bold text-feccia"
-          @click="confirmOpen = true"
-        >
-          Elimina
-        </button>
-      </div>
     </div>
 
-    <!-- Barra d'azione fissa in fondo al pannello, come nella scheda della bottiglia. -->
-    <div class="sticky bottom-0 z-10 mt-2 border-t border-rame/20 bg-doga px-4 pb-4 pt-3">
-      <button type="button" class="min-h-12 w-full rounded-xl bg-feccia px-3 font-bold text-botte" @click="onTried">
-        L'ho provato
+    <!-- Barra d'azione fissa in fondo al pannello, come nella scheda della bottiglia: l'azione
+         principale a parole, Modifica ed Elimina come icone. -->
+    <div class="sticky bottom-0 z-10 mt-2 flex gap-1.5 border-t border-rame/20 bg-doga px-4 pb-4 pt-3">
+      <button type="button" class="flex min-h-12 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-xl bg-feccia px-2 text-sm font-bold text-botte" @click="onTried">L'ho provato</button>
+      <RouterLink :to="`/desiderio/${wish.id}/modifica`" :aria-label="`Modifica ${wish.name}`" :class="[iconButton, 'border-rame/40']">
+        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+        </svg>
+      </RouterLink>
+      <button type="button" :aria-label="`Elimina ${wish.name}`" :class="[iconButton, 'border-feccia text-feccia']" @click="confirmOpen = true">
+        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6" />
+        </svg>
       </button>
     </div>
 

@@ -79,6 +79,9 @@ const untasted = computed(() => bottle.value?.tastedAt === null)
 const aromaTags = computed(() => bottle.value?.aromaTags ?? [])
 const pairingTags = computed(() => bottle.value?.pairingTags ?? [])
 const tagClass = 'rounded-full border border-rame/40 px-3 py-1 text-sm font-bold'
+// Pulsanti della barra: solo testo, su una riga anche a 320 px.
+// Barra della scheda: l'azione principale a parole, le altre come icone (con nome per i lettori di schermo).
+const iconButton = 'flex h-12 w-11 shrink-0 items-center justify-center rounded-xl border'
 const registeredOnly = computed(() => untasted.value || (bottle.value?.tastedAt && bottle.value.tastedAt !== bottle.value.consumedAt))
 const firstTastedLater = computed(() => !untasted.value && registeredOnly.value)
 const deleteMessage = computed(() =>
@@ -188,48 +191,43 @@ function onDeleteConfirmed() {
           Scheda tecnica
         </a>
       </p>
-
-      <div class="mt-6 flex gap-3">
-        <RouterLink
-          :to="`/bottiglia/${bottle.id}/modifica`"
-          class="min-h-11 rounded-md border border-rame/30 px-4 py-2 font-bold"
-        >
-          Modifica
-        </RouterLink>
-        <button
-          type="button"
-          class="min-h-11 rounded-md border border-feccia px-4 py-2 font-bold text-feccia"
-          @click="confirmOpen = true"
-        >
-          Elimina
-        </button>
-      </div>
     </div>
 
-    <!-- Barra d'azione fissa in fondo al pannello: le azioni principali senza scorrere. -->
-    <div class="sticky bottom-0 z-10 mt-2 flex gap-2 border-t border-rame/20 bg-doga px-4 pb-4 pt-3">
+    <!-- Barra d'azione fissa in fondo al pannello, tutte le azioni sulla stessa riga: Stappa (o
+         "Metti in cantina", che porta al selettore della sezione Cantina) a parole, poi Modifica,
+         Elimina e Condividi come icone, così ci stanno anche a 320 px. -->
+    <div class="sticky bottom-0 z-10 mt-2 flex gap-1.5 border-t border-rame/20 bg-doga px-4 pb-4 pt-3">
       <button
         v-if="bottle.cellarCount > 0"
         type="button"
-        class="min-h-12 flex-1 rounded-xl bg-feccia px-3 font-bold text-botte"
+        class="flex min-h-12 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-xl bg-feccia px-2 text-sm font-bold text-botte"
         @click="uncorkBottle(bottle)"
       >
         Stappa
       </button>
-      <button
-        type="button"
-        class="min-h-12 flex-1 rounded-xl border border-rame/40 px-3 font-bold"
-        @click="cellarPanel?.openAdd()"
-      >
-        Aggiungi
+      <button v-else type="button" class="flex min-h-12 min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-xl bg-feccia px-2 text-sm font-bold text-botte" @click="cellarPanel?.focusStepper()">
+        Metti in cantina
+      </button>
+      <RouterLink :to="`/bottiglia/${bottle.id}/modifica`" :aria-label="`Modifica ${bottle.name}`" :class="[iconButton, 'border-rame/40']">
+        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+        </svg>
+      </RouterLink>
+      <button type="button" :aria-label="`Elimina ${bottle.name}`" :class="[iconButton, 'border-feccia text-feccia']" @click="confirmOpen = true">
+        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6" />
+        </svg>
       </button>
       <button
         v-if="!untasted"
         type="button"
-        class="min-h-12 flex-1 rounded-xl border border-rame/40 px-3 font-bold"
+        :aria-label="`Condividi ${bottle.name}`"
+        :class="[iconButton, 'border-rame/40']"
         @click="shareOpen = true"
       >
-        Condividi
+        <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />
+        </svg>
       </button>
     </div>
 

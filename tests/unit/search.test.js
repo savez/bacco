@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { WINE_SUBTYPES, BEER_SUBTYPES } from '../../src/lib/subtypes.js'
 import { normalizeText, filterBottles, groupByMonth, availableYears, availableMonths, cellarSummary, filterWishes, availableSubtypes } from '../../src/lib/search.js'
 
 describe('normalizeText', () => {
@@ -227,12 +228,14 @@ describe('filtro Tipologia (sottocategoria) di Diario e Cantina', () => {
     expect(filterBottles(list, { subtype: 'Stout' })).toEqual([])
   })
 
-  it('availableSubtypes elenca le tipologie della scheda, predefinite prima e libere dopo', () => {
+  it('availableSubtypes elenca sempre le predefinite e, dopo, quelle scritte a mano della scheda', () => {
     expect(availableSubtypes(list)).toEqual([
-      { type: 'wine', label: 'Vino', subtypes: ['Rosso', 'Bianco', 'Orange'] },
-      { type: 'beer', label: 'Birra', subtypes: ['IPA'] },
+      { type: 'wine', label: 'Vino', subtypes: [...WINE_SUBTYPES, 'Orange'] },
+      { type: 'beer', label: 'Birra', subtypes: BEER_SUBTYPES },
     ])
-    expect(availableSubtypes(list, { type: 'beer' })).toEqual([{ type: 'beer', label: 'Birra', subtypes: ['IPA'] }])
-    expect(availableSubtypes(list, { cellar: true })).toEqual([{ type: 'beer', label: 'Birra', subtypes: ['Stout'] }])
+    expect(availableSubtypes(list, { type: 'beer' })).toEqual([{ type: 'beer', label: 'Birra', subtypes: BEER_SUBTYPES }])
+    // In cantina non c'è l'Orange (è solo nel diario), ma le predefinite sì.
+    expect(availableSubtypes(list, { cellar: true, type: 'wine' })).toEqual([{ type: 'wine', label: 'Vino', subtypes: WINE_SUBTYPES }])
+    expect(availableSubtypes([])).toHaveLength(2)
   })
 })
