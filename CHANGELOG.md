@@ -4,6 +4,14 @@ Tutte le modifiche rilevanti del progetto sono documentate in questo file, gener
 [release-please](https://github.com/googleapis/release-please) a partire dai
 [Conventional Commits](https://www.conventionalcommits.org/it/).
 
+## [1.7.0](https://github.com/savez/bacco/compare/v1.6.0...v1.7.0) (2026-10-08)
+
+
+### ✨ Novità
+
+* filtro Tipologia in Diario e Cantina ([630fb2b](https://github.com/savez/bacco/commit/630fb2bcb02600ec4f12bddecb54238447677b01))
+* filtro Tipologia in Diario e Cantina ([e61ac72](https://github.com/savez/bacco/commit/e61ac72f0e642cb1b4169a95ae158b647fedc933))
+
 ## [1.6.0](https://github.com/savez/bacco/compare/v1.5.0...v1.6.0) (2026-10-08)
 
 
