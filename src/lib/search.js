@@ -1,4 +1,5 @@
 import { formatMonthHeading, monthKey } from './format.js'
+import { WINE_SUBTYPES, BEER_SUBTYPES } from './subtypes.js'
 
 /** Minuscolo e senza accenti, per confronti di ricerca. @param {string} text */
 export function normalizeText(text) {
@@ -17,6 +18,10 @@ export function tastedDate(bottle) {
   return bottle.tastedAt === undefined ? bottle.consumedAt : bottle.tastedAt
 }
 
+// Diario: etichette assaggiate. Cantina: con bottiglie in casa o ancora da assaggiare (anche
+// quelle rimaste a 0 con "Più tardi" all'ultimo stappo: altrimenti non sarebbero raggiungibili).
+const inTab = (b, cellar) => (cellar ? (b.cellarCount ?? 0) > 0 || tastedDate(b) === null : tastedDate(b) !== null)
+
 const byTastedDesc = (a, b) => tastedDate(b).localeCompare(tastedDate(a))
 const byCellarDesc = (a, b) => (b.cellarUpdatedAt ?? '').localeCompare(a.cellarUpdatedAt ?? '')
 
@@ -27,7 +32,7 @@ const byCellarDesc = (a, b) => (b.cellarUpdatedAt ?? '').localeCompare(a.cellarU
  * @param {object[]} bottles
  * @param {{query?: string, type?: 'wine'|'beer', year?: number|null, month?: number|null, cellar?: boolean}} filters
  */
-export function filterBottles(bottles, { query, type, year, month, cellar = false } = {}) {
+export function filterBottles(bottles, { query, type, subtype, year, month, cellar = false } = {}) {
   const needle = query ? normalizeText(query) : ''
   if (cellar) {
     year = null
@@ -37,8 +42,9 @@ export function filterBottles(bottles, { query, type, year, month, cellar = fals
     .filter((b) => {
       // Con "In cantina" ci sono anche le etichette da assaggiare rimaste a 0 bottiglie
       // ("Più tardi" all'ultimo stappo): altrimenti non sarebbero raggiungibili da nessuna parte.
-      if (cellar ? !((b.cellarCount ?? 0) > 0 || tastedDate(b) === null) : tastedDate(b) === null) return false
+      if (!inTab(b, cellar)) return false
       if (type && b.type !== type) return false
+      if (subtype && b.subtype !== subtype) return false
       if (year || month) {
         // Anno e mese in ora locale, come li vede l'utente nel registro.
         const d = new Date(tastedDate(b))
@@ -73,6 +79,31 @@ export function filterWishes(wishes, { query, type } = {}) {
       return [w.name, w.producer, w.notes].some((text) => normalizeText(text ?? '').includes(needle))
     })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+/**
+ * Tipologie (sottocategorie) presenti nella scheda, per il filtro "Tipologia" di Diario e
+ * Cantina: un gruppo per il vino e uno per la birra, solo quelli del tipo scelto se c'è. Prima
+ * le tipologie predefinite nel loro ordine, poi quelle scritte a mano in ordine alfabetico.
+ * @param {object[]} bottles
+ * @param {{type?: 'wine'|'beer'|null, cellar?: boolean}} filters
+ * @returns {{type: 'wine'|'beer', label: string, subtypes: string[]}[]}
+ */
+export function availableSubtypes(bottles, { type = null, cellar = false } = {}) {
+  const groups = [
+    { type: 'wine', label: 'Vino', predefined: WINE_SUBTYPES },
+    { type: 'beer', label: 'Birra', predefined: BEER_SUBTYPES },
+  ]
+  return groups
+    .filter((g) => !type || g.type === type)
+    .map(({ type: groupType, label, predefined }) => {
+      const present = new Set(
+        bottles.filter((b) => b.type === groupType && b.subtype && inTab(b, cellar)).map((b) => b.subtype),
+      )
+      const custom = [...present].filter((s) => !predefined.includes(s)).sort((a, b) => a.localeCompare(b, 'it'))
+      return { type: groupType, label, subtypes: [...predefined.filter((s) => present.has(s)), ...custom] }
+    })
+    .filter((g) => g.subtypes.length > 0)
 }
 
 /** Riepilogo della cantina: etichette e bottiglie in casa. @param {object[]} list */
