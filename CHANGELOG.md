@@ -4,6 +4,18 @@ Tutte le modifiche rilevanti del progetto sono documentate in questo file, gener
 [release-please](https://github.com/googleapis/release-please) a partire dai
 [Conventional Commits](https://www.conventionalcommits.org/it/).
 
+## [1.8.0](https://github.com/savez/bacco/compare/v1.7.0...v1.8.0) (2026-10-08)
+
+
+### ✨ Novità
+
+* filtro Vino/Birra a menu "Tipo", come Tipologia, Anno e Mese ([#22](https://github.com/savez/bacco/issues/22)) ([95040cc](https://github.com/savez/bacco/commit/95040cc867eca162a3b6681d54848fb522b92015))
+
+
+### 🐛 Correzioni
+
+* il Nome del modulo bottiglia è un campo di testo semplice, senza il menu a tendina dei suggerimenti ([#22](https://github.com/savez/bacco/issues/22)) ([95040cc](https://github.com/savez/bacco/commit/95040cc867eca162a3b6681d54848fb522b92015))
+
 ## [1.7.0](https://github.com/savez/bacco/compare/v1.6.0...v1.7.0) (2026-10-08)
 
 
