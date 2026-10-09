@@ -1,7 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { addToCellar, adjustCellar, listMoves } from '../db/cellar.js'
-import { confirmWithUndo } from '../composables/useUncork.js'
 import { showBanner } from '../composables/useBanner.js'
 import { useLiveQuery } from '../composables/useLiveQuery.js'
 import { formatMove, formatDateTime } from '../lib/format.js'
@@ -9,14 +8,14 @@ import { CELLAR_MAX } from '../lib/validate.js'
 
 // Sezione "Cantina" della scheda (specs/002-cellar-inventory/contracts/ui-cellar.md). Un solo
 // selettore − N + al posto di "Aggiungi" e "Correggi quantità": ogni tocco salva subito un
-// movimento, con Annulla. Il + è un'entrata; il − una rettifica (bottiglia tolta senza berla:
+// movimento, senza messaggi: il numero che cambia è la conferma (e il tasto opposto corregge un
+// tocco sbagliato). Il + è un'entrata; il − una rettifica (bottiglia tolta senza berla:
 // per berla c'è Stappa nella barra della scheda).
 const props = defineProps({
   bottle: { type: Object, required: true },
 })
 
 const count = computed(() => props.bottle.cellarCount ?? 0)
-const bottlesLabel = (n) => `${n} ${n === 1 ? 'bottiglia' : 'bottiglie'}`
 
 // Un tocco alla volta: il successivo parte quando il movimento precedente è scritto.
 const busy = ref(false)
@@ -25,13 +24,8 @@ async function step(delta) {
   if (busy.value) return
   busy.value = true
   try {
-    if (delta > 0) {
-      const operation = await addToCellar(props.bottle.id, 1)
-      confirmWithUndo(`In cantina: ${bottlesLabel(count.value + 1)}`, operation)
-    } else {
-      const operation = await adjustCellar(props.bottle.id, count.value - 1)
-      confirmWithUndo(`In cantina: ${bottlesLabel(count.value - 1)}`, operation)
-    }
+    if (delta > 0) await addToCellar(props.bottle.id, 1)
+    else await adjustCellar(props.bottle.id, count.value - 1)
   } catch (err) {
     showBanner({ id: 'cellar-op', message: err.message, tone: 'error', priority: 100 })
   } finally {

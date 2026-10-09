@@ -23,6 +23,7 @@ export function useBackupReminder() {
     showBanner({
       id: 'backup-reminder',
       message,
+      tone: 'info',
       priority: 50,
       actions: [
         {
