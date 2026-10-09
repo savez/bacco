@@ -57,7 +57,8 @@ const form = reactive({
 // Cantina (specs/002-cellar-inventory): in creazione le bottiglie in cantina decidono. Con 0
 // la bevo subito (punteggio obbligatorio); con 1 o più vanno in cantina e punteggio e
 // analisi arrivano al primo stappo.
-const bottleCount = ref(0)
+// Dal + con la Cantina aperta (`/nuova?cantina=1`) si parte da 1 bottiglia: "Metti in cantina".
+const bottleCount = ref(!isEdit && route.query.cantina ? 1 : 0)
 const toCellar = computed(() => !isEdit && bottleCount.value >= 1)
 function changeCount(delta) {
   bottleCount.value = Math.min(999, Math.max(0, bottleCount.value + delta))
