@@ -45,6 +45,33 @@ describe('filterBottles', () => {
   })
 })
 
+describe('filtri Punteggio e Gradazione', () => {
+  const list = [
+    bottle({ name: 'Barolo', rating: 5, abv: 14.5 }),
+    bottle({ name: 'Dolcetto', rating: 3, abv: 13 }),
+    bottle({ name: 'Tipopils', type: 'beer', rating: 4, abv: 5.2 }),
+    bottle({ name: 'Senza gradazione', rating: 4 }),
+    bottle({ name: 'In cantina', tastedAt: null, rating: null, abv: 13.5, cellarCount: 2 }),
+  ]
+  const names = (filters) => filterBottles(list, filters).map((b) => b.name).sort()
+
+  it('il punteggio è un minimo', () => {
+    expect(names({ minRating: 4 })).toEqual(['Barolo', 'Senza gradazione', 'Tipopils'])
+    expect(names({ minRating: 5 })).toEqual(['Barolo'])
+  })
+
+  it('la gradazione va per fasce, dal minimo compreso al massimo escluso', () => {
+    expect(names({ abv: '13-14' })).toEqual(['Dolcetto'])
+    expect(names({ abv: 'gte14' })).toEqual(['Barolo'])
+    expect(names({ abv: 'lt6' })).toEqual(['Tipopils'])
+  })
+
+  it('in cantina vale la gradazione ma non il punteggio', () => {
+    expect(names({ cellar: true, abv: '13-14' })).toEqual(['In cantina'])
+    expect(names({ cellar: true, minRating: 4 })).toEqual(['In cantina'])
+  })
+})
+
 describe('groupByMonth', () => {
   it('raggruppa rispettando l\'ordine di arrivo (il chiamante ordina in modo discendente)', () => {
     const list = [

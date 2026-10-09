@@ -7,7 +7,7 @@ import WishRow from '../components/WishRow.vue'
 import { liveWishes } from '../db/wishes.js'
 import { liveBottles } from '../db/bottles.js'
 import { useLiveQuery } from '../composables/useLiveQuery.js'
-import { filterBottles, filterWishes, availableSubtypes, groupByMonth, availableYears, availableMonths, cellarSummary, tastedDate } from '../lib/search.js'
+import { filterBottles, filterWishes, availableSubtypes, groupByMonth, availableYears, availableMonths, cellarSummary, tastedDate, ABV_BANDS } from '../lib/search.js'
 import { db } from '../db/db.js'
 import { photoUrl, revokePhotoUrl } from '../db/photos.js'
 
@@ -49,6 +49,9 @@ const cellar = computed(() => tab.value === 'cantina')
 const wishlist = computed(() => tab.value === 'wishlist')
 const year = ref(null)
 const month = ref(null)
+// Punteggio minimo (solo Diario) e fascia di gradazione (Diario e Cantina).
+const minRating = ref(null)
+const abv = ref(null)
 
 const MONTH_NAMES = Array.from({ length: 12 }, (_, i) => {
   const name = new Intl.DateTimeFormat('it-IT', { month: 'long' }).format(new Date(2026, i, 1))
@@ -62,11 +65,17 @@ watch(year, () => {
   if (month.value && !months.value.includes(month.value)) month.value = null
 })
 
-// Anno e Mese valgono solo nel Diario, la Tipologia in Diario e Cantina: dove non si vedono non
-// contano come filtri attivi.
+// Anno, Mese e Punteggio valgono solo nel Diario, Tipologia e Gradazione in Diario e Cantina: dove
+// non si vedono non contano come filtri attivi.
 const diary = computed(() => tab.value === 'diario')
 const filtersActive = computed(
-  () => !!(query.value || type.value || (!wishlist.value && subtype.value) || (diary.value && (year.value || month.value))),
+  () =>
+    !!(
+      query.value ||
+      type.value ||
+      (!wishlist.value && (subtype.value || abv.value)) ||
+      (diary.value && (year.value || month.value || minRating.value))
+    ),
 )
 const subtypeGroups = computed(() => availableSubtypes(bottles.value, { type: type.value, cellar: cellar.value }))
 // Una tipologia che non c'è più nella scheda o nel tipo scelto (es. "IPA" passando a Vino) si azzera.
@@ -86,6 +95,8 @@ const filtered = computed(() =>
     subtype: subtype.value,
     year: year.value,
     month: month.value,
+    minRating: minRating.value,
+    abv: abv.value,
     cellar: cellar.value,
   }),
 )
@@ -101,6 +112,8 @@ function resetFilters() {
   subtype.value = null
   year.value = null
   month.value = null
+  minRating.value = null
+  abv.value = null
 }
 
 // --- Riepilogo ------------------------------------------------------------------------
@@ -160,6 +173,31 @@ watch(
 )
 
 onBeforeUnmount(revokeCoverUrls)
+
+// Gradazione (Diario e Cantina) e Punteggio (solo Diario), accanto alla Tipologia.
+const bottleFilters = [
+  {
+    key: 'abv',
+    label: 'Gradazione',
+    model: abv,
+    show: computed(() => !wishlist.value),
+    parse: (value) => value,
+    options: ABV_BANDS.map((b) => ({ value: b.key, text: b.label })),
+  },
+  {
+    key: 'rating',
+    label: 'Punteggio',
+    model: minRating,
+    show: diary,
+    parse: Number,
+    options: [
+      { value: 5, text: 'Solo 5' },
+      { value: 4, text: '4 o più' },
+      { value: 3, text: '3 o più' },
+      { value: 2, text: '2 o più' },
+    ],
+  },
+]
 
 const periodFilters = [
   { key: 'year', label: 'Anno', model: year, options: computed(() => years.value.map((y) => ({ value: y, text: y }))) },
@@ -292,6 +330,30 @@ const typeChipClass = computed(() =>
             <path d="m6 9 6 6 6-6" />
           </svg>
         </label>
+        <label v-for="f in bottleFilters" v-show="f.show.value" :key="f.key" class="relative shrink-0">
+          <span class="sr-only">{{ f.label }}</span>
+          <select
+            :value="f.model.value ?? ''"
+            :class="[chipBase, 'appearance-none pr-9', f.model.value ? 'border-rame bg-rame text-doga' : `${chipOff} bg-transparent`]"
+            @change="f.model.value = $event.target.value === '' ? null : f.parse($event.target.value)"
+          >
+            <option value="">{{ f.label }}</option>
+            <option v-for="o in f.options" :key="o.value" :value="o.value">{{ o.text }}</option>
+          </select>
+          <svg
+            viewBox="0 0 24 24"
+            class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2"
+            :class="f.model.value ? 'text-doga' : 'text-cenere'"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </label>
         <span v-if="diary" class="h-6 w-px shrink-0 bg-rame/30" aria-hidden="true"></span>
         <label v-for="f in periodFilters" v-show="diary" :key="f.key" class="relative shrink-0">
           <span class="sr-only">{{ f.label }}</span>
@@ -365,7 +427,7 @@ const typeChipClass = computed(() =>
       </RouterLink>
     </div>
 
-    <div v-else-if="filtered.length === 0 && cellar && !query && !type" class="mt-10 text-center">
+    <div v-else-if="filtered.length === 0 && cellar && !filtersActive" class="mt-10 text-center">
       <p class="text-cenere">La cantina è vuota.</p>
       <p class="mx-auto mt-1 max-w-xs text-sm text-cenere">Registra una bottiglia e indica quante ne metti in cantina.</p>
       <RouterLink to="/nuova" class="mt-4 inline-flex min-h-11 items-center rounded-full bg-feccia px-5 font-bold text-botte">
