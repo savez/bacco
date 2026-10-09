@@ -4,6 +4,13 @@ Tutte le modifiche rilevanti del progetto sono documentate in questo file, gener
 [release-please](https://github.com/googleapis/release-please) a partire dai
 [Conventional Commits](https://www.conventionalcommits.org/it/).
 
+## [1.11.2](https://github.com/savez/bacco/compare/v1.11.1...v1.11.2) (2026-10-09)
+
+
+### 🐛 Correzioni
+
+* messaggi in alto e nessun messaggio sul selettore della cantina ([#34](https://github.com/savez/bacco/issues/34)) ([24e01a7](https://github.com/savez/bacco/commit/24e01a721815cb0d5ff2f597f00a61f6fbca20d6))
+
 ## [1.11.1](https://github.com/savez/bacco/compare/v1.11.0...v1.11.1) (2026-10-09)
 
 
