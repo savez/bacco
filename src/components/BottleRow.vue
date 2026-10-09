@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import BottleRatingMark from './BottleRatingMark.vue'
 import KindIcon from './KindIcon.vue'
-import { kindLabel } from '../lib/format.js'
+import { formatAbv, kindLabel } from '../lib/format.js'
 
 const props = defineProps({
   bottle: { type: Object, required: true },
@@ -21,9 +21,9 @@ const isWine = computed(() => props.bottle.type === 'wine')
 const inCellar = computed(() => props.bottle.cellarCount ?? 0)
 const untasted = computed(() => props.bottle.tastedAt === null)
 
-const subtitle = computed(() =>
-  [kindLabel(props.bottle, ' '), props.bottle.producer, props.bottle.vintage].filter(Boolean).join(' · '),
-)
+// Sotto il nome il produttore (con l'annata), poi tipologia e gradazione.
+const maker = computed(() => [props.bottle.producer, props.bottle.vintage].filter(Boolean).join(' · '))
+const details = computed(() => [kindLabel(props.bottle, ' '), formatAbv(props.bottle.abv)].filter(Boolean).join(' · '))
 </script>
 
 <template>
@@ -38,9 +38,8 @@ const subtitle = computed(() =>
       </span>
       <span class="min-w-0 flex-1">
         <span class="block truncate font-bold">{{ bottle.name }}</span>
-        <span class="block truncate text-sm text-cenere">
-          <span v-if="cellar && untasted" class="font-bold text-luppolo">Da assaggiare · </span>{{ subtitle }}
-        </span>
+        <span v-if="maker" class="block truncate text-sm">{{ maker }}</span>
+        <span class="block truncate text-sm text-cenere">{{ details }}</span>
       </span>
       <span v-if="cellar" class="flex shrink-0 flex-col items-end">
         <span class="font-display text-2xl leading-none text-luppolo" aria-hidden="true">{{ inCellar }}</span>

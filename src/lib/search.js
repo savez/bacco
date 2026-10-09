@@ -22,22 +22,35 @@ export function tastedDate(bottle) {
 // quelle rimaste a 0 con "Più tardi" all'ultimo stappo: altrimenti non sarebbero raggiungibili).
 const inTab = (b, cellar) => (cellar ? (b.cellarCount ?? 0) > 0 || tastedDate(b) === null : tastedDate(b) !== null)
 
+// Fasce del filtro "Gradazione", uguali per vino e birra: da `min` compreso a `max` escluso.
+export const ABV_BANDS = [
+  { key: 'lt6', label: 'Meno di 6%', min: 0, max: 6 },
+  { key: '6-9', label: '6–9%', min: 6, max: 9 },
+  { key: '9-12', label: '9–12%', min: 9, max: 12 },
+  { key: '12-13', label: '12–13%', min: 12, max: 13 },
+  { key: '13-14', label: '13–14%', min: 13, max: 14 },
+  { key: 'gte14', label: '14% e oltre', min: 14, max: Infinity },
+]
+
 const byTastedDesc = (a, b) => tastedDate(b).localeCompare(tastedDate(a))
 const byCellarDesc = (a, b) => (b.cellarUpdatedAt ?? '').localeCompare(a.cellarUpdatedAt ?? '')
 
 /**
  * Elenco della Home. Senza `cellar`: solo etichette assaggiate, dal primo assaggio più
  * recente. Con `cellar`: quelle con bottiglie in casa e quelle ancora da assaggiare,
- * dall'ultima entrata in cantina; anno e mese non si applicano.
+ * dall'ultima entrata in cantina; anno, mese e punteggio non si applicano. `minRating`: punteggio
+ * minimo; `abv`: chiave di una fascia di ABV_BANDS (le bottiglie senza gradazione restano fuori).
  * @param {object[]} bottles
- * @param {{query?: string, type?: 'wine'|'beer', year?: number|null, month?: number|null, cellar?: boolean}} filters
+ * @param {{query?: string, type?: 'wine'|'beer', year?: number|null, month?: number|null, minRating?: number|null, abv?: string|null, cellar?: boolean}} filters
  */
-export function filterBottles(bottles, { query, type, subtype, year, month, cellar = false } = {}) {
+export function filterBottles(bottles, { query, type, subtype, year, month, minRating, abv, cellar = false } = {}) {
   const needle = query ? normalizeText(query) : ''
   if (cellar) {
     year = null
     month = null
+    minRating = null
   }
+  const band = abv ? ABV_BANDS.find((b) => b.key === abv) : null
   return bottles
     .filter((b) => {
       // Con "In cantina" ci sono anche le etichette da assaggiare rimaste a 0 bottiglie
@@ -45,6 +58,8 @@ export function filterBottles(bottles, { query, type, subtype, year, month, cell
       if (!inTab(b, cellar)) return false
       if (type && b.type !== type) return false
       if (subtype && b.subtype !== subtype) return false
+      if (minRating && !(b.rating >= minRating)) return false
+      if (band && (b.abv == null || b.abv < band.min || b.abv >= band.max)) return false
       if (year || month) {
         // Anno e mese in ora locale, come li vede l'utente nel registro.
         const d = new Date(tastedDate(b))
