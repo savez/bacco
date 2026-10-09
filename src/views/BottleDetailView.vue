@@ -81,6 +81,8 @@ const pairingTags = computed(() => bottle.value?.pairingTags ?? [])
 const tagClass = 'rounded-full border border-rame/40 px-3 py-1 text-sm font-bold'
 // Pulsanti della barra: solo testo, su una riga anche a 320 px.
 // Barra della scheda: l'azione principale a parole, le altre come icone (con nome per i lettori di schermo).
+// Sagoma del vino come in BottleRow.vue (viewBox 24×48), per il riquadro della scheda senza foto.
+const WINE_BOTTLE = 'M10.5 5H13.5V14C13.5 16 19 16.5 19 21V44A2 2 0 0 1 17 46H7A2 2 0 0 1 5 44V21C5 16.5 10.5 16 10.5 14Z'
 const iconButton = 'flex h-12 w-11 shrink-0 items-center justify-center rounded-xl border'
 const registeredOnly = computed(() => untasted.value || (bottle.value?.tastedAt && bottle.value.tastedAt !== bottle.value.consumedAt))
 const firstTastedLater = computed(() => !untasted.value && registeredOnly.value)
@@ -115,10 +117,34 @@ function onDeleteConfirmed() {
         class="h-64 w-full shrink-0 snap-center object-cover"
       />
     </div>
+    <!-- Senza foto: un riquadro della stessa altezza con la sagoma della bottiglia, nel colore del
+         vino o della birra, così tutte le schede hanno la stessa struttura. -->
+    <div
+      v-else
+      class="flex h-64 items-center justify-center"
+      :class="bottle.type === 'wine' ? 'bg-feccia/15 text-feccia' : 'bg-luppolo/15 text-luppolo'"
+    >
+      <svg v-if="bottle.type === 'wine'" viewBox="0 0 24 48" class="h-40 w-20" aria-hidden="true">
+        <path :d="WINE_BOTTLE" fill="currentColor" />
+      </svg>
+      <!-- Birra: boccale con la schiuma, come nell'icona dell'app (una bottiglia così grande
+           sembrerebbe di vino). -->
+      <svg v-else viewBox="0 0 48 48" class="h-40 w-40" aria-hidden="true">
+        <g fill="currentColor">
+          <g opacity="0.5">
+            <circle cx="15" cy="14" r="5" />
+            <circle cx="22" cy="11" r="6" />
+            <circle cx="29" cy="14" r="5" />
+            <rect x="10" y="14" width="24" height="5" />
+          </g>
+          <path d="M10 19h24v20a5 5 0 0 1-5 5H15a5 5 0 0 1-5-5Z" />
+        </g>
+        <path d="M34 24h4a4 4 0 0 1 4 4v6a4 4 0 0 1-4 4h-4" fill="none" stroke="currentColor" stroke-width="3.5" />
+      </svg>
+    </div>
 
     <div class="p-4">
-      <!-- Margine a destra solo sull'intestazione: lascia spazio al pulsante di chiusura. -->
-      <div :class="{ 'pr-12': photos.length === 0 }">
+      <div>
         <p class="text-sm font-bold uppercase text-cenere">
           {{ kindLabel(bottle) }}
         </p>
