@@ -46,6 +46,7 @@ export function usePwaUpdate() {
       id: 'pwa-update',
       message: 'Nuova versione disponibile.',
       actions: [{ label: 'Aggiorna', onClick: applyUpdate }],
+      tone: 'info',
       priority: 40,
     })
   })
@@ -55,6 +56,7 @@ export function usePwaUpdate() {
       showBanner({
         id: 'pwa-offline-ready',
         message: 'Bacco è pronto per funzionare offline.',
+        tone: 'info',
         priority: 20,
       })
     }
