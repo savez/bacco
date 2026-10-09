@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { RouterLink } from 'vue-router'
-import { takeHomeTabRequest } from '../lib/homeFilter.js'
+import { takeHomeTabRequest, currentHomeTab } from '../lib/homeFilter.js'
 import BottleRow from '../components/BottleRow.vue'
 import WishRow from '../components/WishRow.vue'
 import { liveWishes } from '../db/wishes.js'
@@ -36,6 +36,7 @@ const tab = ref(takeHomeTabRequest() ?? readTab())
 watch(
   tab,
   (value) => {
+    currentHomeTab.value = value
     try {
       localStorage.setItem(TAB_KEY, value)
     } catch {
@@ -323,9 +324,6 @@ const typeChipClass = computed(() =>
         <button v-if="filtersActive" type="button" class="min-h-11 font-bold text-rame" @click="resetFilters">
           Azzera filtri
         </button>
-        <RouterLink v-if="wishlist" to="/desiderio/nuovo" class="ml-auto inline-flex min-h-11 items-center font-bold text-rame">
-          + Aggiungi
-        </RouterLink>
       </p>
     </template>
 
@@ -336,7 +334,7 @@ const typeChipClass = computed(() =>
         <p class="mt-2 max-w-xs text-cenere">Annota qui i vini e le birre che ti consigliano o che vuoi cercare.</p>
         <RouterLink
           to="/desiderio/nuovo"
-          class="mt-6 inline-flex min-h-12 items-center rounded-full bg-feccia px-6 font-bold text-botte shadow-lg"
+          class="mt-6 inline-flex min-h-12 items-center rounded-full bg-luppolo px-6 font-bold text-doga shadow-lg"
         >
           + Aggiungi alla wishlist
         </RouterLink>
