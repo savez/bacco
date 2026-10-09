@@ -60,10 +60,25 @@ describe('filtri Punteggio e Gradazione', () => {
     expect(names({ minRating: 5 })).toEqual(['Barolo'])
   })
 
-  it('la gradazione va per fasce, dal minimo compreso al massimo escluso', () => {
+  it('la gradazione va per fasce con gli estremi compresi', () => {
     expect(names({ abv: '13-14' })).toEqual(['Dolcetto'])
-    expect(names({ abv: 'gte14' })).toEqual(['Barolo'])
+    expect(names({ abv: '12-13' })).toEqual(['Dolcetto'])
+    expect(names({ abv: '14-15' })).toEqual(['Barolo'])
     expect(names({ abv: 'lt6' })).toEqual(['Tipopils'])
+  })
+
+  it('"Oltre 15%" esclude il 15 e "Meno di 6%" esclude il 6', () => {
+    const edge = [
+      bottle({ name: 'Quindici', abv: 15 }),
+      bottle({ name: 'Quindici e uno', abv: 15.1 }),
+      bottle({ name: 'Sei', abv: 6 }),
+      bottle({ name: 'Quattordici', abv: 14 }),
+    ]
+    const ids = (abv) => filterBottles(edge, { abv }).map((b) => b.name).sort()
+    expect(ids('gt15')).toEqual(['Quindici e uno'])
+    expect(ids('14-15')).toEqual(['Quattordici', 'Quindici'])
+    expect(ids('lt6')).toEqual([])
+    expect(ids('6-9')).toEqual(['Sei'])
   })
 
   it('in cantina vale la gradazione ma non il punteggio', () => {

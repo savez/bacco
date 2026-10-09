@@ -22,15 +22,21 @@ export function tastedDate(bottle) {
 // quelle rimaste a 0 con "Più tardi" all'ultimo stappo: altrimenti non sarebbero raggiungibili).
 const inTab = (b, cellar) => (cellar ? (b.cellarCount ?? 0) > 0 || tastedDate(b) === null : tastedDate(b) !== null)
 
-// Fasce del filtro "Gradazione", uguali per vino e birra: da `min` compreso a `max` escluso.
+// Fasce del filtro "Gradazione", uguali per vino e birra: estremi compresi, tranne dove l'etichetta
+// dice "meno di" / "oltre" (`maxOpen` / `minOpen`: quell'estremo è escluso). Una gradazione che cade
+// su un estremo condiviso (es. 13%) compare in entrambe le fasce.
 export const ABV_BANDS = [
-  { key: 'lt6', label: 'Meno di 6%', min: 0, max: 6 },
+  { key: 'lt6', label: 'Meno di 6%', min: 0, max: 6, maxOpen: true },
   { key: '6-9', label: '6–9%', min: 6, max: 9 },
   { key: '9-12', label: '9–12%', min: 9, max: 12 },
   { key: '12-13', label: '12–13%', min: 12, max: 13 },
   { key: '13-14', label: '13–14%', min: 13, max: 14 },
-  { key: 'gte14', label: '14% e oltre', min: 14, max: Infinity },
+  { key: '14-15', label: '14–15%', min: 14, max: 15 },
+  { key: 'gt15', label: 'Oltre 15%', min: 15, max: Infinity, minOpen: true },
 ]
+
+const inBand = (abv, b) =>
+  abv != null && (b.minOpen ? abv > b.min : abv >= b.min) && (b.maxOpen ? abv < b.max : abv <= b.max)
 
 const byTastedDesc = (a, b) => tastedDate(b).localeCompare(tastedDate(a))
 const byCellarDesc = (a, b) => (b.cellarUpdatedAt ?? '').localeCompare(a.cellarUpdatedAt ?? '')
@@ -59,7 +65,7 @@ export function filterBottles(bottles, { query, type, subtype, year, month, minR
       if (type && b.type !== type) return false
       if (subtype && b.subtype !== subtype) return false
       if (minRating && !(b.rating >= minRating)) return false
-      if (band && (b.abv == null || b.abv < band.min || b.abv >= band.max)) return false
+      if (band && !inBand(b.abv, band)) return false
       if (year || month) {
         // Anno e mese in ora locale, come li vede l'utente nel registro.
         const d = new Date(tastedDate(b))
