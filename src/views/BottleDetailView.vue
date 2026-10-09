@@ -81,6 +81,11 @@ const pairingTags = computed(() => bottle.value?.pairingTags ?? [])
 const tagClass = 'rounded-full border border-rame/40 px-3 py-1 text-sm font-bold'
 // Pulsanti della barra: solo testo, su una riga anche a 320 px.
 // Barra della scheda: l'azione principale a parole, le altre come icone (con nome per i lettori di schermo).
+// Sagome come in BottleRow.vue (viewBox 24×48), per il riquadro della scheda senza foto.
+const SILHOUETTE = {
+  wine: 'M10.5 5H13.5V14C13.5 16 19 16.5 19 21V44A2 2 0 0 1 17 46H7A2 2 0 0 1 5 44V21C5 16.5 10.5 16 10.5 14Z',
+  beer: 'M10 5.5H14V16C14 19 18 20 18 25V44A2 2 0 0 1 16 46H8A2 2 0 0 1 6 44V25C6 20 10 19 10 16Z',
+}
 const iconButton = 'flex h-12 w-11 shrink-0 items-center justify-center rounded-xl border'
 const registeredOnly = computed(() => untasted.value || (bottle.value?.tastedAt && bottle.value.tastedAt !== bottle.value.consumedAt))
 const firstTastedLater = computed(() => !untasted.value && registeredOnly.value)
@@ -115,10 +120,20 @@ function onDeleteConfirmed() {
         class="h-64 w-full shrink-0 snap-center object-cover"
       />
     </div>
+    <!-- Senza foto: un riquadro della stessa altezza con la sagoma della bottiglia, nel colore del
+         vino o della birra, così tutte le schede hanno la stessa struttura. -->
+    <div
+      v-else
+      class="flex h-64 items-center justify-center"
+      :class="bottle.type === 'wine' ? 'bg-feccia/15 text-feccia' : 'bg-luppolo/15 text-luppolo'"
+    >
+      <svg viewBox="0 0 24 48" class="h-40 w-20" aria-hidden="true">
+        <path :d="bottle.type === 'wine' ? SILHOUETTE.wine : SILHOUETTE.beer" fill="currentColor" />
+      </svg>
+    </div>
 
     <div class="p-4">
-      <!-- Margine a destra solo sull'intestazione: lascia spazio al pulsante di chiusura. -->
-      <div :class="{ 'pr-12': photos.length === 0 }">
+      <div>
         <p class="text-sm font-bold uppercase text-cenere">
           {{ kindLabel(bottle) }}
         </p>
