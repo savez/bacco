@@ -4,6 +4,14 @@ Tutte le modifiche rilevanti del progetto sono documentate in questo file, gener
 [release-please](https://github.com/googleapis/release-please) a partire dai
 [Conventional Commits](https://www.conventionalcommits.org/it/).
 
+## [1.11.1](https://github.com/savez/bacco/compare/v1.11.0...v1.11.1) (2026-10-09)
+
+
+### 🐛 Correzioni
+
+* boccale per la birra anche nelle righe dell'elenco ([#33](https://github.com/savez/bacco/issues/33)) ([0bbdfa2](https://github.com/savez/bacco/commit/0bbdfa2b0daa00cae54318d5dbdb21c4162ff36f))
+* immagine predefinita nella scheda senza foto ([#31](https://github.com/savez/bacco/issues/31)) ([3c67bcf](https://github.com/savez/bacco/commit/3c67bcf677d3c938d9fb6d62e3f424ca3190cc28))
+
 ## [1.11.0](https://github.com/savez/bacco/compare/v1.10.0...v1.11.0) (2026-10-09)
 
 
