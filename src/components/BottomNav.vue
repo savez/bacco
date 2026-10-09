@@ -1,11 +1,15 @@
 <script setup>
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import { currentHomeTab } from '../lib/homeFilter.js'
 
 const route = useRoute()
 
 // Nel modulo della bottiglia l'azione principale è già "Salva": il + non serve.
 const showAdd = computed(() => route.name !== 'bottle-new' && route.name !== 'bottle-edit')
+// Il + fa l'azione principale della schermata: con la scheda Wishlist aperta in Home aggiunge un
+// desiderio (ed è color luppolo, come la Wishlist), altrove registra una bottiglia.
+const addsWish = computed(() => route.name === 'registry' && currentHomeTab.value === 'wishlist')
 
 // Icone a tratto (24×24), stesso spessore per tutte le voci.
 const HOME = 'M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10'
@@ -32,9 +36,10 @@ const itemClass =
         <!-- Azione principale al centro, rialzata sul bordo della barra: a portata di pollice. -->
         <RouterLink
           v-if="showAdd"
-          to="/nuova"
-          aria-label="Nuova bottiglia"
-          class="-mt-7 mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-feccia text-botte shadow-xl ring-4 ring-botte"
+          :to="addsWish ? '/desiderio/nuovo' : '/nuova'"
+          :aria-label="addsWish ? 'Aggiungi alla wishlist' : 'Nuova bottiglia'"
+          class="-mt-7 mb-2 flex h-14 w-14 items-center justify-center rounded-2xl shadow-xl ring-4 ring-botte transition-colors"
+          :class="addsWish ? 'bg-luppolo text-doga' : 'bg-feccia text-botte'"
         >
           <svg viewBox="0 0 24 24" class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
             <path d="M12 5v14M5 12h14" />
