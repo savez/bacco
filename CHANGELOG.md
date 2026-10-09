@@ -4,6 +4,13 @@ Tutte le modifiche rilevanti del progetto sono documentate in questo file, gener
 [release-please](https://github.com/googleapis/release-please) a partire dai
 [Conventional Commits](https://www.conventionalcommits.org/it/).
 
+## [1.10.0](https://github.com/savez/bacco/compare/v1.9.0...v1.10.0) (2026-10-09)
+
+
+### ✨ Novità
+
+* il + aggiunge alla wishlist quando è aperta ([#26](https://github.com/savez/bacco/issues/26)) ([28323ac](https://github.com/savez/bacco/commit/28323acf1cbfcb72eb4964a6168936d2f6bb60b4))
+
 ## [1.9.0](https://github.com/savez/bacco/compare/v1.8.0...v1.9.0) (2026-10-08)
 
 
