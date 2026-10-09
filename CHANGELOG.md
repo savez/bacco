@@ -4,6 +4,13 @@ Tutte le modifiche rilevanti del progetto sono documentate in questo file, gener
 [release-please](https://github.com/googleapis/release-please) a partire dai
 [Conventional Commits](https://www.conventionalcommits.org/it/).
 
+## [1.11.0](https://github.com/savez/bacco/compare/v1.10.0...v1.11.0) (2026-10-09)
+
+
+### ✨ Novità
+
+* il + in Cantina parte da 1 bottiglia in cantina ([#29](https://github.com/savez/bacco/issues/29)) ([4abaeb7](https://github.com/savez/bacco/commit/4abaeb72f376a0aa652f5aa7cde5b9a9a9b347eb))
+
 ## [1.10.0](https://github.com/savez/bacco/compare/v1.9.0...v1.10.0) (2026-10-09)
 
 
