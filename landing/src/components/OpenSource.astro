@@ -11,6 +11,14 @@ const stack = ['Vue 3', 'Tailwind CSS 4', 'Dexie / IndexedDB', 'Workbox', 'Leafl
       Licenza MIT. Il codice è su GitHub: le PR sono benvenute, le idee anche.{' '}
       <a href={meta.contributingUrl} rel="noopener noreferrer" target="_blank">Come contribuire</a>.
     </p>
+    <p class="author">
+      <img src={`${import.meta.env.BASE_URL}progetti/savez.jpg`} alt="" width="44" height="44" loading="lazy" />
+      <span>
+        Scritto e mantenuto da{" "}
+        <a href={meta.authorUrl} rel="noopener noreferrer" target="_blank">{meta.authorHandle}</a>,
+        autore e contributor principale.
+      </span>
+    </p>
     <ul class="stack">
       {stack.map((s) => <li>{s}</li>)}
     </ul>
@@ -18,6 +26,19 @@ const stack = ['Vue 3', 'Tailwind CSS 4', 'Dexie / IndexedDB', 'Workbox', 'Leafl
 </section>
 
 <style>
+  .author {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-top: 1.5rem;
+    color: var(--cenere);
+    max-width: 58ch;
+  }
+  .author img {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    border: 2px solid var(--rame);
+  }
   .stack {
     list-style: none;
     padding: 0;

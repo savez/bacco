@@ -30,6 +30,8 @@ const ogImage = new URL(`${base}og.png`, Astro.site).href
     <title>{meta.appName} — {meta.tagline}</title>
     <meta name="description" content={meta.description} />
     <link rel="canonical" href={pageUrl} />
+    <meta name="author" content="savez (https://github.com/savez)" />
+    <link rel="author" href="https://github.com/savez" />
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={`${meta.appName} — ${meta.tagline}`} />

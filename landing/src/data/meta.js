@@ -13,11 +13,39 @@ export const meta = {
   securityUrl: `${repo}/blob/main/SECURITY.md`,
   licenseUrl: `${repo}/blob/main/LICENSE`,
   issuesUrl: `${repo}/issues/new/choose`,
+  starsUrl: `${repo}/stargazers`,
   authorHandle: '@savez',
   authorUrl: 'https://github.com/savez',
   supportUrl: 'https://buymeacoffee.com/goeokwihgz',
   version: import.meta.env.PUBLIC_APP_VERSION ?? 'dev',
 }
+
+// I progetti di @savez: stessa lista, stesso ordine, nel footer di tutte e tre
+// le landing (nonAbbocco, bacco, fidality-card). Se ne aggiungi uno, aggiungilo
+// anche nelle altre due.
+export const projects = [
+  {
+    id: 'nonabbocco',
+    name: 'NonAbbocco',
+    url: 'https://nonabbocco.smzstudio.it/',
+    icon: 'progetti/nonabbocco.png',
+    what: 'Ti avvisa quando un indirizzo imita un sito vero.',
+  },
+  {
+    id: 'bacco',
+    name: 'Bacco',
+    url: 'https://bacco.smzstudio.it/',
+    icon: 'progetti/bacco.svg',
+    what: 'Il diario dei vini e delle birre che bevi.',
+  },
+  {
+    id: 'fidelity-card',
+    name: 'Fidelity Card',
+    url: 'https://fidality-card.smzstudio.it/',
+    icon: 'progetti/fidelity-card.svg',
+    what: 'Le tessere fedeltà, sul telefono.',
+  },
+]
 
 // Livelli del punteggio: stessi testi dell'app (src/lib/rating.js su main).
 export const ratingLevels = [
