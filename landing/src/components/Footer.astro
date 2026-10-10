@@ -162,6 +162,7 @@ const ext = { rel: 'noopener noreferrer', target: '_blank' }
   }
   .others a {
     display: flex;
+    height: 100%;
     align-items: center;
     gap: 0.75rem;
     padding: 0.7rem 1rem;
@@ -190,11 +191,17 @@ const ext = { rel: 'noopener noreferrer', target: '_blank' }
       grid-template-columns: 1.4fr 1fr 1fr;
     }
     .signature {
-      grid-template-columns: 1fr 1.6fr;
+      grid-template-columns: 1.4fr 1fr 1fr;
+      column-gap: 2rem;
       align-items: start;
     }
+    .others {
+      grid-column: span 2;
+    }
+
     .others ul {
       grid-template-columns: 1fr 1fr;
+      column-gap: 2rem;
     }
   }
 </style>
