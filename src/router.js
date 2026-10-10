@@ -5,6 +5,7 @@ import BottleDetailView from './views/BottleDetailView.vue'
 import SettingsView from './views/SettingsView.vue'
 import WishFormView from './views/WishFormView.vue'
 import WishDetailView from './views/WishDetailView.vue'
+import ListEditView from './views/ListEditView.vue'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -60,6 +61,15 @@ export const router = createRouter({
       component: () => import('./views/MapView.vue'),
     },
     { path: '/impostazioni', name: 'settings', component: SettingsView },
+    // Elenchi personalizzabili (specs/006-menu-personalizzabili): un elenco nel pannello modale
+    // sopra le Impostazioni. Prima del catch-all.
+    {
+      path: '/impostazioni/elenchi/:list',
+      name: 'list-edit',
+      component: ListEditView,
+      props: true,
+      meta: { modal: true, sheetLabel: 'Elenco' },
+    },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })

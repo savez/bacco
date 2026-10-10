@@ -7,6 +7,7 @@ import WishRow from '../components/WishRow.vue'
 import { liveWishes } from '../db/wishes.js'
 import { liveBottles } from '../db/bottles.js'
 import { useLiveQuery } from '../composables/useLiveQuery.js'
+import { useLists } from '../composables/useLists.js'
 import { filterBottles, filterWishes, availableSubtypes, groupByMonth, availableYears, availableMonths, cellarSummary, tastedDate, ABV_BANDS } from '../lib/search.js'
 import { db } from '../db/db.js'
 import { photoUrl, revokePhotoUrl } from '../db/photos.js'
@@ -77,7 +78,10 @@ const filtersActive = computed(
       (diary.value && (year.value || month.value || minRating.value))
     ),
 )
-const subtypeGroups = computed(() => availableSubtypes(bottles.value, { type: type.value, cellar: cellar.value }))
+const { texts: listTexts } = useLists()
+const subtypeGroups = computed(() =>
+  availableSubtypes(bottles.value, { type: type.value, cellar: cellar.value }, { wine: listTexts('subtype.wine'), beer: listTexts('subtype.beer') }),
+)
 // Una tipologia che non c'è più nella scheda o nel tipo scelto (es. "IPA" passando a Vino) si azzera.
 watch(subtypeGroups, (groups) => {
   if (!wishlist.value && subtype.value && !groups.some((g) => g.subtypes.includes(subtype.value))) subtype.value = null

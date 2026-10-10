@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { WINE_AROMAS, BEER_AROMAS, PAIRINGS, aromasFor, keepValidAromas, normalizeTags } from '../../src/lib/tastingTags.js'
+import { WINE_AROMAS, BEER_AROMAS, PAIRINGS, ALL_AROMAS, cleanTags } from '../../src/lib/tastingTags.js'
 
 describe('vocabolari', () => {
   it('aromi del vino, della birra e abbinamenti come da specifica', () => {
@@ -8,26 +8,32 @@ describe('vocabolari', () => {
     expect(PAIRINGS).toEqual(['Carne', 'Pesce', 'Formaggi', 'Pizza', 'Salumi', 'Dolci'])
   })
 
-  it('aromasFor sceglie l\'elenco del tipo', () => {
-    expect(aromasFor('wine')).toBe(WINE_AROMAS)
-    expect(aromasFor('beer')).toBe(BEER_AROMAS)
-    expect(aromasFor(null)).toEqual([])
-  })
 })
 
-describe('keepValidAromas', () => {
-  it('passando da vino a birra restano solo gli aromi comuni', () => {
-    expect(keepValidAromas(['Tannico', 'Fresco', 'Tostato'], 'beer')).toEqual(['Tostato', 'Fresco'])
-  })
-})
 
-describe('normalizeTags', () => {
-  it('toglie voci sconosciute e doppioni e segue l\'ordine del vocabolario', () => {
-    expect(normalizeTags(['Pizza', 'Carne', 'Pizza', 'Sushi'], PAIRINGS)).toEqual(['Carne', 'Pizza'])
+
+describe('cleanTags', () => {
+  it('tiene le voci nuove, toglie i doppioni per chiave e segue l\'ordine dato', () => {
+    expect(cleanTags(['Sushi', 'pizza', 'Pizza', 'SUSHI '], PAIRINGS)).toEqual(['Sushi', 'Pizza'])
   })
 
-  it('accetta valori mancanti o non elenchi', () => {
-    expect(normalizeTags(undefined, PAIRINGS)).toEqual([])
-    expect(normalizeTags('Carne', PAIRINGS)).toEqual([])
+  it('riporta alla voce canonica', () => {
+    expect(cleanTags(['fruttato', 'Balsamico'], ALL_AROMAS)).toEqual(['Fruttato', 'Balsamico'])
+  })
+
+  it('scarta vuoti e non testi, accetta valori che non sono elenchi', () => {
+    expect(cleanTags(['  ', 3, null, 'Carne'], PAIRINGS)).toEqual(['Carne'])
+    expect(cleanTags(undefined, PAIRINGS)).toEqual([])
+    expect(cleanTags('Carne', PAIRINGS)).toEqual([])
+  })
+
+  it('limiti: scarta le voci troppo lunghe e tiene le prime maxCount', () => {
+    expect(cleanTags(['a'.repeat(41), 'b'], [], { maxLength: 40 })).toEqual(['b'])
+    expect(cleanTags(['a', 'b', 'c'], [], { maxCount: 2 })).toEqual(['a', 'b'])
+  })
+
+  it('ALL_AROMAS non ha doppioni e contiene vino e birra', () => {
+    expect(new Set(ALL_AROMAS).size).toBe(ALL_AROMAS.length)
+    expect(ALL_AROMAS).toEqual(expect.arrayContaining(['Tannico', 'Luppolato', 'Fresco']))
   })
 })

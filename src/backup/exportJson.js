@@ -1,6 +1,7 @@
 import { db } from '../db/db.js'
 import { setSetting } from '../db/settings.js'
 import { downloadBlob, todayStamp } from '../lib/download.js'
+import { getCustomLists } from '../db/lists.js'
 
 const CHUNK_SIZE = 32 * 1024
 
@@ -42,12 +43,15 @@ export async function buildBackupBlob() {
     first = false
   }
   // Cantina (formatVersion 2): registro movimenti di tutte le etichette. Wishlist
-  // (specs/005-wishlist): campo facoltativo dello stesso formato, letto solo se c'è.
+  // (specs/005-wishlist) ed elenchi personalizzabili (specs/006): campi facoltativi dello stesso
+  // formato, letti solo se ci sono.
   parts.push(
     '],"cellarMoves":',
     JSON.stringify(await db.cellarMoves.toArray()),
     ',"wishes":',
     JSON.stringify(await db.wishes.toArray()),
+    ',"customLists":',
+    JSON.stringify(await getCustomLists()),
     '}',
   )
   return new Blob(parts, { type: 'application/json' })

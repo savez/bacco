@@ -1,4 +1,5 @@
-// Sottocategorie predefinite (FR-028). L'utente può sempre scriverne una libera ("Altro").
+// Sottocategorie predefinite (FR-028). L'utente può sempre scriverne una libera ("Altro"), che dal
+// 2026-10 (specs/006) resta tra le voci del menu.
 export const WINE_SUBTYPES = ['Rosso', 'Bianco', 'Rosato', 'Bollicine', 'Passito']
 
 export const BEER_SUBTYPES = [
@@ -17,10 +18,3 @@ export const BEER_SUBTYPES = [
 
 // Denominazioni del vino (FR-032). Non si applicano alla birra.
 export const APPELLATIONS = ['DOCG', 'DOC', 'IGT', 'IGP']
-
-/** @param {'wine'|'beer'|null} type */
-export function subtypesFor(type) {
-  if (type === 'wine') return WINE_SUBTYPES
-  if (type === 'beer') return BEER_SUBTYPES
-  return []
-}

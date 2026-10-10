@@ -2,7 +2,9 @@ import { liveQuery } from 'dexie'
 import { db } from './db.js'
 import { move } from './bottles.js'
 import { CELLAR_MAX } from '../lib/validate.js'
-import { PAIRINGS, keepValidAromas, normalizeTags } from '../lib/tastingTags.js'
+import { PAIRINGS, ALL_AROMAS, cleanTags } from '../lib/tastingTags.js'
+import { TAG_MAX, TAGS_MAX } from '../lib/lists.js'
+import { learnFromBottle } from './lists.js'
 
 // Cantina personale (specs/002-cellar-inventory/data-model.md). Ogni operazione scrive il
 // movimento e la quantità dell'etichetta nella stessa transazione, così il registro resta
@@ -86,15 +88,24 @@ export async function uncork(id) {
  */
 export async function recordFirstTasting(id, { rating, tasting = '', pairing = '', aromaTags = [], pairingTags = [] }) {
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new CellarError('Scegli un punteggio da 1 a 5.')
-  return db.transaction('rw', db.bottles, async () => {
+  return db.transaction('rw', db.bottles, db.settings, async () => {
     const bottle = await getOrFail(id)
     const now = new Date().toISOString()
+    // Voci predefinite o aggiunte dall'utente (specs/006): si ripuliscono, non si filtrano; quelle
+    // nuove entrano negli elenchi nella stessa transazione del salvataggio.
+    const limits = { maxLength: TAG_MAX, maxCount: TAGS_MAX }
+    const filled = {
+      ...bottle,
+      aromaTags: cleanTags(aromaTags, ALL_AROMAS, limits),
+      pairingTags: cleanTags(pairingTags, PAIRINGS, limits),
+    }
+    const learned = await learnFromBottle(filled, bottle)
     await db.bottles.update(id, {
       rating,
       tasting: String(tasting).trim().slice(0, 1000),
       pairing: String(pairing).trim().slice(0, 500),
-      aromaTags: keepValidAromas(aromaTags, bottle.type),
-      pairingTags: normalizeTags(pairingTags, PAIRINGS),
+      aromaTags: learned.aromaTags,
+      pairingTags: learned.pairingTags,
       tastedAt: now,
       updatedAt: now,
     })

@@ -3,7 +3,6 @@ import { reactive, ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import TypeToggle from '../components/TypeToggle.vue'
 import TastingFields from '../components/TastingFields.vue'
-import { keepValidAromas } from '../lib/tastingTags.js'
 import PhotoPicker from '../components/PhotoPicker.vue'
 import PermissionHelp from '../components/PermissionHelp.vue'
 import { explainLocationError } from '../lib/permissions.js'
@@ -12,8 +11,9 @@ import { addToCellar } from '../db/cellar.js'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 import { listPhotos, photoUrl } from '../db/photos.js'
 import { getCurrentLocation } from '../lib/geo.js'
-import { subtypesFor, APPELLATIONS } from '../lib/subtypes.js'
-import { RED_GRAPES, WHITE_GRAPES, GRAPE_MAX, isListedGrape } from '../lib/grapes.js'
+import { GRAPE_MAX } from '../lib/grapes.js'
+import { APPELLATION_MAX, GRAPE_GROUPS, listIdFor } from '../lib/lists.js'
+import { useLists, loadCustomLists } from '../composables/useLists.js'
 import { toDateAndTime, fromDateAndTime } from '../lib/format.js'
 import { showBanner } from '../composables/useBanner.js'
 import { withTimeout } from '../lib/timeout.js'
@@ -119,8 +119,18 @@ function setFieldRef(key) {
   }
 }
 
+// --- Elenchi (specs/006-menu-personalizzabili) -------------------------------------
+// Predefinite + voci aggiunte dall'utente. In modifica `customLists` si riempie con
+// `loadCustomLists()` prima di decidere "Altro…": la lettura reattiva parte a componente montato.
+const { customLists, full, texts } = useLists()
+const textsFor = (field, type) => {
+  const id = listIdFor(field, type)
+  return id ? texts(id) : []
+}
+const grapeGroups = computed(() => full('grape'))
+
 // --- Sottocategoria (FR-028) -------------------------------------------------------
-const subtypeOptions = computed(() => subtypesFor(form.type))
+const subtypeOptions = computed(() => textsFor('subtype', form.type))
 const otherSubtype = ref(false)
 // "Altro" è attivo se scelto, o se il valore attuale non è tra quelli predefiniti
 // (es. "Saison" arrivato dal registro): così una sottocategoria libera è sempre visibile.
@@ -145,6 +155,26 @@ const OTHER_GRAPE = '__other__'
 const grapeChoice = ref('')
 const grapeOtherRef = ref(null)
 
+// --- Denominazione: chip + "Altro…" come la sottocategoria -------------------------
+const appellationOptions = computed(() => textsFor('appellation', form.type))
+const otherAppellation = ref(false)
+const showOtherAppellation = computed(
+  () => otherAppellation.value || (!!form.appellation && !appellationOptions.value.includes(form.appellation)),
+)
+const appellationOtherRef = ref(null)
+
+function pickAppellation(option) {
+  otherAppellation.value = false
+  form.appellation = form.appellation === option ? '' : option
+}
+
+async function pickOtherAppellation() {
+  otherAppellation.value = true
+  if (appellationOptions.value.includes(form.appellation)) form.appellation = ''
+  await nextTick()
+  appellationOtherRef.value?.focus()
+}
+
 watch(grapeChoice, async (choice) => {
   if (choice !== OTHER_GRAPE) return
   await nextTick()
@@ -154,12 +184,23 @@ watch(grapeChoice, async (choice) => {
 watch(
   () => form.type,
   (type, previous) => {
-    // Cambiando tipo, una sottocategoria predefinita del tipo precedente non ha più senso;
-    // una scritta a mano ("Altro") invece resta.
-    if (previous && type !== previous && subtypesFor(previous).includes(form.subtype)) form.subtype = ''
+    // Solo un cambio fatto dall'utente: il caricamento in modifica passa da `null` al tipo salvato
+    // e non deve toccare nulla (altrimenti, con gli elenchi non ancora letti, si perderebbero voci).
+    if (previous && type !== previous) {
+      // Una sottocategoria del tipo precedente (predefinita o aggiunta) non ha più senso; una
+      // scritta a mano ("Altro") che non è in nessun elenco invece resta.
+      if (textsFor('subtype', previous).includes(form.subtype) && !textsFor('subtype', type).includes(form.subtype)) {
+        form.subtype = ''
+      }
+      // Gli aromi del tipo precedente che non valgono per il nuovo si tolgono; quelli che non sono
+      // in nessun elenco (voci eliminate, FR-019) restano.
+      const before = textsFor('aromaTags', previous)
+      const after = textsFor('aromaTags', type)
+      form.aromaTags = form.aromaTags.filter((tag) => !before.includes(tag) || after.includes(tag))
+    }
     // La denominazione vale solo per il vino.
-    form.aromaTags = keepValidAromas(form.aromaTags, type)
     if (type !== 'wine') {
+      otherAppellation.value = false
       form.appellation = ''
       form.stateSeal = ''
       form.grape = ''
@@ -213,7 +254,8 @@ onMounted(async () => {
     return
   }
 
-  const existing = await getBottle(route.params.id)
+  const [existing, loadedLists] = await Promise.all([getBottle(route.params.id), loadCustomLists()])
+  customLists.value = loadedLists
   if (!existing) {
     notFound.value = true
     loading.value = false
@@ -223,8 +265,9 @@ onMounted(async () => {
     if (key === 'consumedDate' || key === 'consumedTime') continue
     form[key] = existing[key] ?? (key === 'type' || key === 'rating' ? null : '')
   }
-  // Un vitigno fuori elenco si riapre come "Altro…" con il testo nel campo.
-  grapeChoice.value = !existing.grape ? '' : isListedGrape(existing.grape) ? existing.grape : OTHER_GRAPE
+  // Un vitigno fuori elenco (anche uno eliminato dalle Impostazioni) si riapre come "Altro…" con
+  // il testo nel campo.
+  grapeChoice.value = !existing.grape ? '' : texts('grape').includes(existing.grape) ? existing.grape : OTHER_GRAPE
   form.vintage = existing.vintage ? String(existing.vintage) : ''
   form.abv = existing.abv != null ? String(existing.abv).replace('.', ',') : ''
   // Record precedenti alla migrazione v2 restano leggibili anche se non ancora riscritti.
@@ -442,12 +485,11 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
               :aria-invalid="!!errors.grape"
             >
               <option value="">—</option>
-              <optgroup label="Bacca nera">
-                <option v-for="g in RED_GRAPES" :key="g" :value="g">{{ g }}</option>
-              </optgroup>
-              <optgroup label="Bacca bianca">
-                <option v-for="g in WHITE_GRAPES" :key="g" :value="g">{{ g }}</option>
-              </optgroup>
+              <template v-for="group in GRAPE_GROUPS" :key="group.id">
+                <optgroup v-if="grapeGroups[group.id].length > 0" :label="group.label">
+                  <option v-for="g in grapeGroups[group.id]" :key="g" :value="g">{{ g }}</option>
+                </optgroup>
+              </template>
               <option :value="OTHER_GRAPE">Altro…</option>
             </select>
             <svg
@@ -540,7 +582,7 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
           <p id="appellation-label" class="field-label">Denominazione</p>
           <div role="group" aria-labelledby="appellation-label" class="mt-1 flex flex-wrap gap-2">
             <button
-              v-for="option in APPELLATIONS"
+              v-for="option in appellationOptions"
               :key="option"
               type="button"
               :aria-pressed="form.appellation === option"
@@ -549,11 +591,33 @@ const chipClass = 'min-h-11 rounded-full border px-3 text-sm font-bold'
                 'min-w-16',
                 form.appellation === option ? 'border-feccia bg-feccia text-botte' : 'border-rame/30 text-cenere',
               ]"
-              @click="form.appellation = form.appellation === option ? '' : option"
+              @click="pickAppellation(option)"
             >
               {{ option }}
             </button>
+            <button
+              type="button"
+              :aria-pressed="showOtherAppellation"
+              :class="[chipClass, showOtherAppellation ? 'border-rame bg-rame text-doga' : 'border-rame/30 text-cenere']"
+              @click="pickOtherAppellation"
+            >
+              Altro…
+            </button>
           </div>
+          <template v-if="showOtherAppellation">
+            <label for="appellation-other" class="mt-3 block text-sm font-bold">Quale denominazione?</label>
+            <input
+              id="appellation-other"
+              ref="appellationOtherRef"
+              v-model="form.appellation"
+              type="text"
+              :maxlength="APPELLATION_MAX"
+              autocomplete="off"
+              placeholder="Es. AOC, Vin de France"
+              :class="inputClass"
+              :aria-invalid="!!errors.appellation"
+            />
+          </template>
           <p v-if="errors.appellation" class="mt-1 text-sm text-feccia">{{ errors.appellation }}</p>
         </div>
 

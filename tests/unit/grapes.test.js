@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { RED_GRAPES, WHITE_GRAPES, GRAPE_MAX, canonicalGrape, isListedGrape } from '../../src/lib/grapes.js'
+import { RED_GRAPES, WHITE_GRAPES, GRAPE_MAX, canonicalGrape } from '../../src/lib/grapes.js'
 
 const sorted = (list) => [...list].sort((a, b) => a.localeCompare(b, 'it'))
 
@@ -41,14 +41,5 @@ describe('canonicalGrape', () => {
     expect(canonicalGrape('   ')).toBeNull()
     expect(canonicalGrape(null)).toBeNull()
     expect(canonicalGrape(undefined)).toBeNull()
-  })
-})
-
-describe('isListedGrape', () => {
-  it('vero solo per le voci esatte dell’elenco', () => {
-    expect(isListedGrape('Nebbiolo')).toBe(true)
-    expect(isListedGrape('Timorasso')).toBe(false)
-    expect(isListedGrape('nebbiolo')).toBe(false)
-    expect(isListedGrape(null)).toBe(false)
   })
 })

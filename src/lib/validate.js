@@ -4,7 +4,9 @@
 
 import { APPELLATIONS } from './subtypes.js'
 import { GRAPE_MAX, canonicalGrape } from './grapes.js'
-import { PAIRINGS, keepValidAromas, normalizeTags } from './tastingTags.js'
+import { PAIRINGS, ALL_AROMAS, cleanTags } from './tastingTags.js'
+import { APPELLATION_MAX, TAG_MAX, TAGS_MAX } from './lists.js'
+import { listKey } from './search.js'
 
 const NAME_MAX = 120
 const NOTES_MAX = 5000
@@ -122,15 +124,17 @@ export function validateBottle(input, { now = new Date() } = {}) {
   }
   value.subtype = subtype.length > 0 ? subtype : null
 
-  // Denominazione: solo per il vino; per la birra viene ignorata (FR-032).
-  const appellation = cleanText(data.appellation ?? '').toUpperCase()
+  // Denominazione: solo per il vino; per la birra viene ignorata (FR-032). Una predefinita scritta
+  // a mano torna la voce canonica ("docg" → "DOCG"); una nuova resta com'è scritta (specs/006).
+  const appellation = cleanText(data.appellation ?? '').replace(/\s+/g, ' ')
   if (data.type !== 'wine' || appellation.length === 0) {
     value.appellation = null
-  } else if (!APPELLATIONS.includes(appellation)) {
-    errors.appellation = `Scegli una denominazione tra ${APPELLATIONS.join(', ')}.`
-    value.appellation = appellation
   } else {
-    value.appellation = appellation
+    if (appellation.length > APPELLATION_MAX) {
+      errors.appellation = `La denominazione può avere al massimo ${APPELLATION_MAX} caratteri.`
+    }
+    const key = listKey(appellation)
+    value.appellation = APPELLATIONS.find((a) => listKey(a) === key) ?? appellation
   }
 
   // Contrassegno di Stato: il seriale della fascetta dei vini DOC e DOCG (es. ADK007842971).
@@ -159,10 +163,15 @@ export function validateBottle(input, { now = new Date() } = {}) {
   }
   value.tasting = tasting
 
-  // Note organolettiche a chip (specs/003-cantina-viva-ui): solo voci dei vocabolari fissi;
-  // valori sconosciuti scartati senza errore (un backup futuro con voci nuove resta importabile).
-  value.aromaTags = keepValidAromas(data.aromaTags, data.type)
-  value.pairingTags = normalizeTags(data.pairingTags, PAIRINGS)
+  // Note organolettiche (specs/003-cantina-viva-ui, specs/006-menu-personalizzabili): voci
+  // predefinite o aggiunte dall'utente, quindi testo libero ripulito, senza doppioni, nell'ordine
+  // della scelta. Nessun filtro per tipo: una voce del vino può essere stata aggiunta alla birra.
+  value.aromaTags = cleanTags(data.aromaTags, ALL_AROMAS)
+  if (value.aromaTags.some((tag) => tag.length > TAG_MAX)) errors.aromaTags = `Ogni aroma può avere al massimo ${TAG_MAX} caratteri.`
+  else if (value.aromaTags.length > TAGS_MAX) errors.aromaTags = `Al massimo ${TAGS_MAX} aromi.`
+  value.pairingTags = cleanTags(data.pairingTags, PAIRINGS)
+  if (value.pairingTags.some((tag) => tag.length > TAG_MAX)) errors.pairingTags = `Ogni abbinamento può avere al massimo ${TAG_MAX} caratteri.`
+  else if (value.pairingTags.length > TAGS_MAX) errors.pairingTags = `Al massimo ${TAGS_MAX} abbinamenti.`
 
   const pairing = cleanText(data.pairing ?? '')
   if (pairing.length > PAIRING_MAX) {

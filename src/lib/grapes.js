@@ -1,7 +1,8 @@
-import { normalizeText } from './search.js'
+import { listKey } from './search.js'
 
-// Vitigni comuni per il menu del modulo (specs/004-vitigno). Non è un elenco chiuso: con
-// "Altro…" si scrive qualunque altro vitigno o un uvaggio.
+// Vitigni predefiniti per il menu del modulo (specs/004-vitigno). Non sono un elenco chiuso: con
+// "Altro…" si scrive qualunque altro vitigno o un uvaggio, e dal 2026-10 (specs/006) quelli
+// scritti a mano restano nel menu.
 export const RED_GRAPES = [
   'Aglianico',
   'Barbera',
@@ -52,8 +53,7 @@ export const WHITE_GRAPES = [
 export const GRAPE_MAX = 60
 
 const ALL = [...RED_GRAPES, ...WHITE_GRAPES]
-const key = (text) => normalizeText(text).replace(/\s+/g, ' ').trim()
-const byKey = new Map(ALL.map((grape) => [key(grape), grape]))
+const byKey = new Map(ALL.map((grape) => [listKey(grape), grape]))
 
 /**
  * Vitigno ripulito: `null` se vuoto; la voce dell'elenco se il testo le corrisponde (senza
@@ -63,10 +63,5 @@ const byKey = new Map(ALL.map((grape) => [key(grape), grape]))
 export function canonicalGrape(text) {
   const clean = (text ?? '').replace(/\s+/g, ' ').trim()
   if (clean.length === 0) return null
-  return byKey.get(key(clean)) ?? clean
-}
-
-/** Vero se `value` è esattamente una voce dell'elenco. @param {string|null|undefined} value */
-export function isListedGrape(value) {
-  return ALL.includes(value)
+  return byKey.get(listKey(clean)) ?? clean
 }

@@ -10,6 +10,15 @@ export function normalizeText(text) {
 }
 
 /**
+ * Chiave di confronto delle voci degli elenchi (specs/006-menu-personalizzabili): due voci che
+ * differiscono solo per maiuscole, accenti o spazi hanno la stessa chiave.
+ * @param {string|null|undefined} text
+ */
+export function listKey(text) {
+  return normalizeText(text).replace(/\s+/g, ' ').trim()
+}
+
+/**
  * Data del primo assaggio (specs/002-cellar-inventory): `null` = da assaggiare. I record
  * senza il campo (precedenti alla cantina) sono assaggiati il giorno della bevuta.
  * @param {{tastedAt?: string|null, consumedAt: string}} bottle
@@ -104,17 +113,23 @@ export function filterWishes(wishes, { query, type } = {}) {
 
 /**
  * Tipologie (sottocategorie) per il filtro "Tipologia" di Diario e Cantina: un gruppo per il
- * vino e uno per la birra, solo quello del tipo scelto se c'è. Sempre tutte le predefinite, nel
- * loro ordine, così il filtro si vede anche se nessuna bottiglia ha ancora una tipologia; poi
- * quelle scritte a mano presenti nella scheda, in ordine alfabetico.
+ * vino e uno per la birra, solo quello del tipo scelto se c'è. Sempre tutto l'elenco ricevuto
+ * (predefinite nel loro ordine e voci aggiunte, specs/006), così il filtro si vede anche se
+ * nessuna bottiglia ha ancora una tipologia; poi i valori presenti nella scheda ma fuori elenco,
+ * in ordine alfabetico.
  * @param {object[]} bottles
  * @param {{type?: 'wine'|'beer'|null, cellar?: boolean}} filters
+ * @param {{wine: string[], beer: string[]}} [lists] elenchi completi delle tipologie
  * @returns {{type: 'wine'|'beer', label: string, subtypes: string[]}[]}
  */
-export function availableSubtypes(bottles, { type = null, cellar = false } = {}) {
+export function availableSubtypes(
+  bottles,
+  { type = null, cellar = false } = {},
+  lists = { wine: WINE_SUBTYPES, beer: BEER_SUBTYPES },
+) {
   const groups = [
-    { type: 'wine', label: 'Vino', predefined: WINE_SUBTYPES },
-    { type: 'beer', label: 'Birra', predefined: BEER_SUBTYPES },
+    { type: 'wine', label: 'Vino', predefined: lists.wine },
+    { type: 'beer', label: 'Birra', predefined: lists.beer },
   ]
   return groups
     .filter((g) => !type || g.type === type)
@@ -122,7 +137,8 @@ export function availableSubtypes(bottles, { type = null, cellar = false } = {})
       const present = new Set(
         bottles.filter((b) => b.type === groupType && b.subtype && inTab(b, cellar)).map((b) => b.subtype),
       )
-      const custom = [...present].filter((s) => !predefined.includes(s)).sort((a, b) => a.localeCompare(b, 'it'))
+      const known = new Set(predefined.map(listKey))
+      const custom = [...present].filter((s) => !known.has(listKey(s))).sort((a, b) => a.localeCompare(b, 'it'))
       return { type: groupType, label, subtypes: [...predefined, ...custom] }
     })
 }

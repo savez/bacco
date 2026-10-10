@@ -204,8 +204,13 @@ describe('analisi organolettica, abbinamento, gradazione, sottocategoria', () =>
   it('accetta la denominazione solo per il vino', () => {
     expect(validateBottle({ ...base(), appellation: 'docg' }).value.appellation).toBe('DOCG')
     expect(validateBottle({ ...base(), type: 'beer', appellation: 'DOC' }).value.appellation).toBeNull()
-    expect(validateBottle({ ...base(), appellation: 'AOC' }).errors.appellation).toBeTruthy()
     expect(validateBottle(base()).value.appellation).toBeNull()
+  })
+
+  it('accetta una denominazione nuova così com’è, senza maiuscolo forzato', () => {
+    expect(validateBottle({ ...base(), appellation: 'AOC' }).value.appellation).toBe('AOC')
+    expect(validateBottle({ ...base(), appellation: 'Vin de France' }).value.appellation).toBe('Vin de France')
+    expect(validateBottle({ ...base(), appellation: 'a'.repeat(31) }).errors.appellation).toBeTruthy()
   })
 
   it('rifiuta testi troppo lunghi', () => {
@@ -310,16 +315,32 @@ describe('chip di aromi e abbinamenti', () => {
     expect(res.value.pairingTags).toEqual([])
   })
 
-  it('scarta voci sconosciute e doppioni senza errore', () => {
-    const res = validateBottle({ ...wine(), aromaTags: ['Tannico', 'Tannico', 'Inventato'], pairingTags: ['Pizza', 'Sushi'] })
+  it('tiene le voci nuove, toglie i doppioni per chiave e segue l’ordine dato', () => {
+    const res = validateBottle({ ...wine(), aromaTags: ['Tannico', 'tannico', 'Balsamico'], pairingTags: ['Sushi', 'pizza'] })
     expect(res.ok).toBe(true)
-    expect(res.value.aromaTags).toEqual(['Tannico'])
-    expect(res.value.pairingTags).toEqual(['Pizza'])
+    expect(res.value.aromaTags).toEqual(['Tannico', 'Balsamico'])
+    expect(res.value.pairingTags).toEqual(['Sushi', 'Pizza'])
   })
 
-  it('tiene solo gli aromi del tipo', () => {
-    const res = validateBottle({ name: 'Tipopils', type: 'beer', rating: 4, aromaTags: ['Tannico', 'Luppolato', 'Fresco'] })
-    expect(res.value.aromaTags).toEqual(['Luppolato', 'Fresco'])
+  it('non filtra gli aromi per tipo: una voce del vino può essere di una birra', () => {
+    const res = validateBottle({ name: 'Tipopils', type: 'beer', rating: 4, aromaTags: ['Speziato', 'Luppolato'] })
+    expect(res.value.aromaTags).toEqual(['Speziato', 'Luppolato'])
+  })
+
+  it('riporta una predefinita (di vino o di birra) scritta a mano alla voce canonica', () => {
+    expect(validateBottle({ name: 'Tipopils', type: 'beer', rating: 4, aromaTags: ['fruttato'] }).value.aromaTags).toEqual(['Fruttato'])
+  })
+
+  it('rifiuta voci oltre 40 caratteri e più di 30 voci', () => {
+    expect(validateBottle({ ...wine(), aromaTags: ['a'.repeat(41)] }).errors.aromaTags).toBeTruthy()
+    expect(validateBottle({ ...wine(), pairingTags: ['b'.repeat(41)] }).errors.pairingTags).toBeTruthy()
+    const many = Array.from({ length: 31 }, (_, i) => `voce ${i}`)
+    expect(validateBottle({ ...wine(), aromaTags: many }).errors.aromaTags).toBeTruthy()
+    expect(validateBottle({ ...wine(), pairingTags: many }).errors.pairingTags).toBeTruthy()
+  })
+
+  it('scarta voci vuote o non testo', () => {
+    expect(validateBottle({ ...wine(), aromaTags: ['  ', 4, 'Tannico'] }).value.aromaTags).toEqual(['Tannico'])
   })
 })
 

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { db } from '../db/db.js'
 import { getSetting } from '../db/settings.js'
 import { exportJson } from '../backup/exportJson.js'
@@ -18,6 +18,8 @@ import { withTimeout } from '../lib/timeout.js'
 import { queryPermission, explainCameraError, explainLocationError } from '../lib/permissions.js'
 import { getCurrentLocation } from '../lib/geo.js'
 import { closeSheet } from '../composables/useSheet.js'
+import { useLists } from '../composables/useLists.js'
+import { LISTS } from '../lib/lists.js'
 
 const router = useRouter()
 
@@ -35,6 +37,8 @@ const UPDATE_MESSAGES = {
 }
 
 const theme = ref(getThemePreference())
+// Elenchi personalizzabili (specs/006-menu-personalizzabili): una riga per elenco, con le voci.
+const { texts: listTexts } = useLists()
 const lastExportAt = ref(null)
 const importing = ref(false)
 const deleteConfirmOpen = ref(false)
@@ -218,6 +222,29 @@ async function onSecondConfirm() {
           {{ option.label }}
         </label>
       </div>
+    </section>
+
+    <section class="mt-8">
+      <h2 class="font-display text-lg uppercase tracking-wide">Elenchi</h2>
+      <p class="mt-1 text-sm text-cenere">
+        Le voci dei menu del modulo: aggiungine di tue, rinominale o eliminale. Quelle scritte con «Altro…» si aggiungono da sole.
+      </p>
+      <ul class="mt-2 divide-y divide-rame/10">
+        <li v-for="item in LISTS" :key="item.id">
+          <RouterLink
+            :to="{ name: 'list-edit', params: { list: item.id } }"
+            class="flex min-h-11 items-center justify-between gap-2 py-2"
+          >
+            <span>{{ item.label }}</span>
+            <span class="flex items-center gap-2 text-cenere">
+              {{ listTexts(item.id).length }}
+              <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m9 6 6 6-6 6" />
+              </svg>
+            </span>
+          </RouterLink>
+        </li>
+      </ul>
     </section>
 
     <section class="mt-8">
