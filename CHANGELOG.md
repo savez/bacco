@@ -4,6 +4,13 @@ Tutte le modifiche rilevanti del progetto sono documentate in questo file, gener
 [release-please](https://github.com/googleapis/release-please) a partire dai
 [Conventional Commits](https://www.conventionalcommits.org/it/).
 
+## [1.11.4](https://github.com/savez/bacco/compare/v1.11.3...v1.11.4) (2026-10-10)
+
+
+### 🐛 Correzioni
+
+* fasce di gradazione 14–15% e oltre 15%, con estremi compresi ([#38](https://github.com/savez/bacco/issues/38)) ([d43b896](https://github.com/savez/bacco/commit/d43b89683376db51023659cdcb2b2d55acfac153))
+
 ## [1.11.3](https://github.com/savez/bacco/compare/v1.11.2...v1.11.3) (2026-10-09)
 
 

@@ -1,6 +1,6 @@
 {
   "name": "bacco",
-  "version": "1.11.3",
+  "version": "1.11.4",
   "description": "PWA offline-first per tenere il registro personale di vini e birre bevuti",
   "license": "MIT",
   "private": true,
