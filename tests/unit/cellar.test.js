@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { db } from '../../src/db/db.js'
 import { createBottle } from '../../src/db/bottles.js'
+import { getCustomLists } from '../../src/db/lists.js'
 import { addToCellar, uncork, recordFirstTasting, undoMove, adjustCellar, CellarError } from '../../src/db/cellar.js'
 
 const inCellar = (n) => createBottle({ name: 'Barolo', type: 'wine', tastedAt: null, cellarCount: n })
@@ -16,6 +17,7 @@ afterEach(async () => {
   await db.photos.clear()
   await db.cellarMoves.clear()
   await db.wishes.clear()
+  await db.settings.clear()
   db.close()
 })
 
@@ -168,13 +170,30 @@ describe('adjustCellar', () => {
 })
 
 describe('primo assaggio con i chip', () => {
-  it('salva aromi, abbinamenti e testi, filtrati sui vocabolari', async () => {
+  it('salva aromi, abbinamenti e testi, anche voci nuove e dell\'altro tipo', async () => {
     const bottle = await inCellar(3)
     await uncork(bottle.id)
     const stored = await recordFirstTasting(bottle.id, {
       rating: 4, tasting: 'viola', aromaTags: ['Tannico', 'Luppolato'], pairingTags: ['Carne', 'Sushi'], pairing: 'brasato',
     })
-    expect(stored).toMatchObject({ rating: 4, tasting: 'viola', aromaTags: ['Tannico'], pairingTags: ['Carne'], pairing: 'brasato' })
+    expect(stored).toMatchObject({ rating: 4, tasting: 'viola', aromaTags: ['Tannico', 'Luppolato'], pairingTags: ['Carne', 'Sushi'], pairing: 'brasato' })
+  })
+
+  it('le voci nuove entrano negli elenchi; quelle già presenti non si riaggiungono', async () => {
+    const bottle = await inCellar(3)
+    await uncork(bottle.id)
+    await recordFirstTasting(bottle.id, { rating: 4, aromaTags: ['Balsamico', 'tannico'], pairingTags: ['Sushi', 'carne'] })
+    expect(await getCustomLists()).toEqual({
+      'aroma.wine': [{ text: 'Balsamico' }],
+      pairing: [{ text: 'Sushi' }],
+    })
+  })
+
+  it('un abbinamento troppo lungo o in eccesso si scarta, non si salva', async () => {
+    const bottle = await inCellar(3)
+    await uncork(bottle.id)
+    const stored = await recordFirstTasting(bottle.id, { rating: 4, pairingTags: ['x'.repeat(41), 'Carne'] })
+    expect(stored.pairingTags).toEqual(['Carne'])
   })
 
   it('annullare il primo stappo toglie anche chip e testi', async () => {

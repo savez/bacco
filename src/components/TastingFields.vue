@@ -1,11 +1,14 @@
 <script setup>
 import { computed, useId } from 'vue'
 import BottleRating from './BottleRating.vue'
-import { aromasFor, PAIRINGS } from '../lib/tastingTags.js'
+import TagPicker from './TagPicker.vue'
+import { useLists } from '../composables/useLists.js'
+import { listIdFor } from '../lib/lists.js'
 
-// Assaggio (specs/003-cantina-viva-ui, FR-207–209): punteggio, aromi e abbinamento a chip, più
-// i campi di testo libero sempre visibili. Stesso componente in nuova bottiglia, modifica e
-// "Com'è?", così si comporta ovunque allo stesso modo.
+// Assaggio (specs/003-cantina-viva-ui, FR-207–209): punteggio, aromi e abbinamenti, più i campi di
+// testo libero sempre visibili. Aromi e abbinamenti sono menu a tendina che aggiungono una voce
+// alla volta, con "Altro…" per le voci nuove (specs/006-menu-personalizzabili). Stesso componente
+// in nuova bottiglia, modifica e "Com'è?", così si comporta ovunque allo stesso modo.
 const props = defineProps({
   type: { type: String, default: null },
   ratingRequired: { type: Boolean, default: true },
@@ -19,21 +22,14 @@ const tasting = defineModel('tasting', { type: String, default: '' })
 const pairing = defineModel('pairing', { type: String, default: '' })
 
 const uid = useId()
-const aromas = computed(() => aromasFor(props.type))
+const { texts } = useLists()
+const aromas = computed(() => {
+  const id = listIdFor('aromaTags', props.type)
+  return id ? texts(id) : []
+})
+const pairings = computed(() => texts('pairing'))
 
-// Nel template i ref dei modelli arrivano già "scartati": per cambiarli servono funzioni
-// che lavorano sul ref, una per gruppo.
-const toggled = (list, tag) => (list.includes(tag) ? list.filter((t) => t !== tag) : [...list, tag])
-function toggleAroma(tag) {
-  aromaTags.value = toggled(aromaTags.value, tag)
-}
-function togglePairing(tag) {
-  pairingTags.value = toggled(pairingTags.value, tag)
-}
-
-const chipBase = 'inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-bold'
 const aromaOn = computed(() => (props.type === 'beer' ? 'border-luppolo bg-luppolo text-doga' : 'border-feccia bg-feccia text-botte'))
-const chipOff = 'border-rame/30 text-cenere'
 const inputClass = 'mt-1 w-full rounded-md border border-rame/30 bg-doga px-3 text-gesso'
 </script>
 
@@ -47,20 +43,17 @@ const inputClass = 'mt-1 w-full rounded-md border border-rame/30 bg-doga px-3 te
     </fieldset>
 
     <div>
-      <p :id="`${uid}-aromi`" class="field-label">Aromi</p>
+      <p v-if="!type" class="field-label">Aromi</p>
       <p v-if="!type" class="mt-1 text-sm text-cenere">Scegli prima se è un vino o una birra.</p>
-      <div v-else role="group" :aria-labelledby="`${uid}-aromi`" class="mt-1 flex flex-wrap gap-2">
-        <button
-          v-for="tag in aromas"
-          :key="tag"
-          type="button"
-          :aria-pressed="aromaTags.includes(tag)"
-          :class="[chipBase, aromaTags.includes(tag) ? aromaOn : chipOff]"
-          @click="toggleAroma(tag)"
-        >
-          {{ tag }}
-        </button>
-      </div>
+      <TagPicker
+        v-else
+        v-model="aromaTags"
+        label="Aromi"
+        new-label="Nuovo aroma"
+        placeholder="Es. Balsamico"
+        :options="aromas"
+        :chip-on-class="aromaOn"
+      />
       <label :for="`${uid}-tasting`" class="mt-3 block text-sm font-bold">Analisi organolettica personale</label>
       <textarea
         :id="`${uid}-tasting`"
@@ -75,19 +68,14 @@ const inputClass = 'mt-1 w-full rounded-md border border-rame/30 bg-doga px-3 te
     </div>
 
     <div>
-      <p :id="`${uid}-abbinamento`" class="field-label">Con cosa l'ho mangiato</p>
-      <div role="group" :aria-labelledby="`${uid}-abbinamento`" class="mt-1 flex flex-wrap gap-2">
-        <button
-          v-for="tag in PAIRINGS"
-          :key="tag"
-          type="button"
-          :aria-pressed="pairingTags.includes(tag)"
-          :class="[chipBase, pairingTags.includes(tag) ? 'border-rame bg-rame text-doga' : chipOff]"
-          @click="togglePairing(tag)"
-        >
-          {{ tag }}
-        </button>
-      </div>
+      <TagPicker
+        v-model="pairingTags"
+        label="Con cosa l'ho mangiato"
+        new-label="Nuovo abbinamento"
+        placeholder="Es. Sushi"
+        :options="pairings"
+        chip-on-class="border-rame bg-rame text-doga"
+      />
       <label :for="`${uid}-pairing`" class="mt-3 block text-sm font-bold">Altro sull'abbinamento</label>
       <input
         :id="`${uid}-pairing`"

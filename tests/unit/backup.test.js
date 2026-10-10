@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { db } from '../../src/db/db.js'
 import { createBottle } from '../../src/db/bottles.js'
 import { createWish } from '../../src/db/wishes.js'
+import { addEntry, getCustomLists } from '../../src/db/lists.js'
 import { setSetting, getSetting } from '../../src/db/settings.js'
 import { buildBackupBlob } from '../../src/backup/exportJson.js'
 import { importBackup } from '../../src/backup/importJson.js'
@@ -307,7 +308,7 @@ describe('chip nel backup (SC-204)', () => {
     await db.bottles.clear()
     await db.cellarMoves.clear()
     await importBackup(file, { makeThumbnail: fakeThumbnail })
-    expect(await db.bottles.get(b.id)).toMatchObject({ aromaTags: ['Fruttato', 'Tannico'], pairingTags: ['Carne'] })
+    expect(await db.bottles.get(b.id)).toMatchObject({ aromaTags: ['Tannico', 'Fruttato'], pairingTags: ['Carne'] })
   })
 })
 
@@ -413,5 +414,80 @@ describe('wishlist nel backup (specs/005-wishlist)', () => {
     await expect(importBackup(backup, { makeThumbnail: fakeThumbnail })).rejects.toThrow(message)
     expect(await db.bottles.count()).toBe(0)
     expect(await db.wishes.count()).toBe(0)
+  })
+})
+
+describe('elenchi personalizzabili nel backup (specs/006-menu-personalizzabili)', () => {
+  const file = async () => new File([await buildBackupBlob()], 'backup.json', { type: 'application/json' })
+  const empty = (extra = {}) => ({ app: 'bacco', formatVersion: 2, bottles: [], cellarMoves: [], ...extra })
+  const backupBottle = (extra = {}) => {
+    const now = new Date().toISOString()
+    return { id: crypto.randomUUID(), name: 'Derthona', type: 'wine', rating: 4, consumedAt: now, notes: '', barcode: null, externalUrl: null, location: null, createdAt: now, updatedAt: now, photos: [], ...extra }
+  }
+  const run = (data) => importBackup(jsonFile(data), { makeThumbnail: fakeThumbnail })
+
+  it('esporta sempre customLists, anche vuoto', async () => {
+    const data = JSON.parse(await (await file()).text())
+    expect(data.formatVersion).toBe(2)
+    expect(data.customLists).toEqual({})
+  })
+
+  it('esporta e reimporta le voci aggiunte', async () => {
+    await addEntry('grape', 'Timorasso', 'other')
+    await addEntry('grape', 'Pecorino', 'white')
+    await addEntry('subtype.beer', 'Saison')
+    await addEntry('pairing', 'Sushi')
+    const before = await getCustomLists()
+    const backup = await file()
+    await db.settings.clear()
+    expect(await getCustomLists()).toEqual({})
+
+    await importBackup(backup, { makeThumbnail: fakeThumbnail })
+    expect(await getCustomLists()).toEqual(before)
+  })
+
+  it('unisce alle voci presenti senza doppioni; la presente tiene testo e gruppo', async () => {
+    await addEntry('grape', 'Timorasso', 'other')
+    const incoming = { grape: [{ text: 'timorasso', group: 'white' }, { text: 'Pecorino', group: 'white' }], pairing: [{ text: 'Sushi' }] }
+    await run(empty({ customLists: incoming }))
+    await run(empty({ customLists: incoming })) // reimportarlo non crea doppioni
+    expect(await getCustomLists()).toEqual({
+      grape: [{ text: 'Timorasso', group: 'other' }, { text: 'Pecorino', group: 'white' }],
+      pairing: [{ text: 'Sushi' }],
+    })
+  })
+
+  it('salta le voci uguali a una predefinita, ignora gli elenchi sconosciuti e i valori che non sono elenchi', async () => {
+    await run(empty({ customLists: { grape: [{ text: 'nebbiolo', group: 'red' }], nope: [{ text: 'x' }], appellation: 'AOC', pairing: [{ text: 'carne' }] } }))
+    expect(await getCustomLists()).toEqual({})
+  })
+
+  it('un gruppo assente o non valido diventa "other"; altrove il gruppo si ignora', async () => {
+    await run(empty({ customLists: { grape: [{ text: 'Ruchè' }, { text: 'Pecorino', group: 'verde' }], pairing: [{ text: 'Sushi', group: 'red' }] } }))
+    expect(await getCustomLists()).toEqual({
+      grape: [{ text: 'Ruchè', group: 'other' }, { text: 'Pecorino', group: 'other' }],
+      pairing: [{ text: 'Sushi' }],
+    })
+  })
+
+  it('una voce non valida annulla l\'import: nessuna scrittura', async () => {
+    const data = empty({ bottles: [backupBottle()], customLists: { grape: [{ text: 'Ruchè' }, { text: '   ' }] } })
+    await expect(run(data)).rejects.toThrow('Elenco "Vitigno", voce 2: testo non valido.')
+    await expect(run(empty({ customLists: { appellation: [{ text: 'a'.repeat(31) }] } }))).rejects.toThrow('Elenco "Denominazione", voce 1: testo non valido.')
+    expect(await db.bottles.count()).toBe(0)
+    expect(await getCustomLists()).toEqual({})
+  })
+
+  it('un backup senza customLists lascia gli elenchi come sono', async () => {
+    await addEntry('grape', 'Timorasso', 'other')
+    await run(empty())
+    expect(await getCustomLists()).toEqual({ grape: [{ text: 'Timorasso', group: 'other' }] })
+  })
+
+  it('bottiglie con denominazione, aromi e abbinamenti nuovi si importano; i loro valori non entrano negli elenchi', async () => {
+    const bottle = backupBottle({ appellation: 'AOC', aromaTags: ['Balsamico', 'Tannico'], pairingTags: ['Sushi'], grape: 'Timorasso', subtype: 'Orange' })
+    await run(empty({ bottles: [bottle] }))
+    expect(await db.bottles.get(bottle.id)).toMatchObject({ appellation: 'AOC', aromaTags: ['Balsamico', 'Tannico'], pairingTags: ['Sushi'], grape: 'Timorasso', subtype: 'Orange' })
+    expect(await getCustomLists()).toEqual({})
   })
 })

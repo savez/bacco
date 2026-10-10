@@ -1,11 +1,24 @@
 import { describe, it, expect } from 'vitest'
 import { WINE_SUBTYPES, BEER_SUBTYPES } from '../../src/lib/subtypes.js'
-import { normalizeText, filterBottles, groupByMonth, availableYears, availableMonths, cellarSummary, filterWishes, availableSubtypes } from '../../src/lib/search.js'
+import { normalizeText, listKey, filterBottles, groupByMonth, availableYears, availableMonths, cellarSummary, filterWishes, availableSubtypes } from '../../src/lib/search.js'
 
 describe('normalizeText', () => {
   it('rimuove accenti e porta in minuscolo', () => {
     expect(normalizeText("Nebbiolo d'Alba")).toBe("nebbiolo d'alba")
     expect(normalizeText('Peró')).toBe('pero')
+  })
+})
+
+describe('listKey', () => {
+  it('stessa chiave per voci che differiscono solo per maiuscole, accenti e spazi', () => {
+    expect(listKey('  Nebbiolo ')).toBe(listKey('nebbiolo'))
+    expect(listKey('Gewürztraminer')).toBe(listKey('gewurztraminer'))
+    expect(listKey('Merlot  e Cabernet')).toBe(listKey('merlot e cabernet'))
+  })
+
+  it('vuoto per null e undefined', () => {
+    expect(listKey(null)).toBe('')
+    expect(listKey(undefined)).toBe('')
   })
 })
 
@@ -279,5 +292,27 @@ describe('filtro Tipologia (sottocategoria) di Diario e Cantina', () => {
     // In cantina non c'è l'Orange (è solo nel diario), ma le predefinite sì.
     expect(availableSubtypes(list, { cellar: true, type: 'wine' })).toEqual([{ type: 'wine', label: 'Vino', subtypes: WINE_SUBTYPES }])
     expect(availableSubtypes([])).toHaveLength(2)
+  })
+
+  describe('con gli elenchi completi (specs/006)', () => {
+    const lists = { wine: [...WINE_SUBTYPES, 'Metodo classico'], beer: [...BEER_SUBTYPES, 'Saison'] }
+
+    it('le voci aggiunte compaiono anche senza bottiglie', () => {
+      expect(availableSubtypes([], {}, lists)).toEqual([
+        { type: 'wine', label: 'Vino', subtypes: lists.wine },
+        { type: 'beer', label: 'Birra', subtypes: lists.beer },
+      ])
+    })
+
+    it('un valore presente nelle bottiglie ma fuori elenco compare in A→Z dopo l\'elenco, senza doppioni per chiave', () => {
+      const bottles = [
+        bottle({ type: 'wine', subtype: 'Orange', tastedAt: undefined }),
+        bottle({ type: 'wine', subtype: 'metodo classico' }),
+        bottle({ type: 'wine', subtype: 'Ancestrale' }),
+      ]
+      expect(availableSubtypes(bottles, { type: 'wine' }, lists)).toEqual([
+        { type: 'wine', label: 'Vino', subtypes: [...lists.wine, 'Ancestrale', 'Orange'] },
+      ])
+    })
   })
 })

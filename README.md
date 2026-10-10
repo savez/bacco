@@ -36,6 +36,9 @@ foto, punteggio, analisi organolettica, abbinamento, luogo e ricordi. Funziona o
   (DOCG, DOC, IGT, IGP), annata, gradazione, analisi organolettica, abbinamento, note.
 - 🍷 **Vitigno** del vino: si sceglie da un elenco di vitigni comuni (a bacca nera e bianca) o,
   con *Altro…*, si scrive a mano; compare nell'elenco e si trova con la ricerca.
+- ✏️ **Elenchi personalizzabili**: ciò che scrivi con *Altro…* (vitigno, tipologia, denominazione,
+  aromi, abbinamenti) resta nel menu per le prossime bottiglie. In **Impostazioni → Elenchi**
+  aggiungi, rinomini ed elimini le tue voci; quelle predefinite restano fisse.
 - 🏷️ **Contrassegno di Stato**: il codice della fascetta dei vini DOC e DOCG
   (es. ADK007842971), da verificare con l'app ufficiale *Trust your wine* del Poligrafico.
 - ⭐ **Punteggio da 1 a 5** con le bottiglie al posto delle stelle e una descrizione per ogni livello.
@@ -46,8 +49,9 @@ foto, punteggio, analisi organolettica, abbinamento, luogo e ricordi. Funziona o
 - 📝 **Wishlist** dei vini e delle birre da provare: nome, produttore, annata, chi te l'ha
   consigliato e il link alla scheda tecnica. Quando lo assaggi, **L'ho provato** apre la
   registrazione già compilata e lo toglie dalla lista.
-- 🏷️ **Note organolettiche a chip**: aromi diversi per vino e birra e abbinamenti da toccare,
-  più il testo libero; la ricerca trova anche "tannico" o "pizza".
+- 🏷️ **Note organolettiche**: aromi diversi per vino e birra e abbinamenti, scelti da un menu che
+  aggiunge una voce alla volta (con *Altro…* per le voci nuove), più il testo libero; la ricerca
+  trova anche "tannico" o "pizza".
 - 🗺️ **Mappa** dei luoghi dove hai bevuto (solo se acconsenti alla posizione).
 - 📤 **Card da condividere** sui social, in stile "ho bevuto".
 - 💾 **Backup** in JSON (con le foto) e export CSV per i fogli di calcolo, con promemoria ogni 30 giorni.

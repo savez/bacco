@@ -2,6 +2,7 @@ import { liveQuery } from 'dexie'
 import { db } from './db.js'
 import { validateBottle } from '../lib/validate.js'
 import { normalizeText } from '../lib/search.js'
+import { learnFromBottle } from './lists.js'
 
 /**
  * Nuovo movimento di cantina (data-model.md); i campi non usati dal tipo restano null.
@@ -31,14 +32,16 @@ export async function createBottle(input, { addPhotos = [], removeWishId = null 
   const result = validateBottle(input)
   if (!result.ok) throw new ValidationError(result.errors)
   const now = new Date().toISOString()
-  const bottle = { ...result.value, id: crypto.randomUUID(), createdAt: now, updatedAt: now }
+  let bottle = { ...result.value, id: crypto.randomUUID(), createdAt: now, updatedAt: now }
   // "Quando" della registrazione: anche i movimenti iniziali della cantina partono da lì.
   const registeredAt = bottle.consumedAt
   if (bottle.cellarCount > 0) bottle.cellarUpdatedAt = registeredAt
   const moves = [move(bottle.id, 'first', { at: registeredAt })]
   if (bottle.cellarCount > 0) moves.push(move(bottle.id, 'in', { qty: bottle.cellarCount, at: registeredAt }))
 
-  await db.transaction('rw', db.bottles, db.photos, db.cellarMoves, db.wishes, async () => {
+  await db.transaction('rw', db.bottles, db.photos, db.cellarMoves, db.wishes, db.settings, async () => {
+    // Le voci nuove entrano negli elenchi solo se il salvataggio riesce (specs/006, FR-011).
+    bottle = await learnFromBottle(bottle)
     await db.bottles.put(bottle)
     await db.cellarMoves.bulkAdd(moves)
     if (removeWishId) await db.wishes.delete(removeWishId)
@@ -82,8 +85,8 @@ export async function updateBottle(id, input, { addPhotos = [], removePhotoIds =
   })
   if (!result.ok) throw new ValidationError(result.errors)
 
-  return db.transaction('rw', db.bottles, db.photos, async () => {
-    const updated = { ...existing, ...result.value, id, updatedAt: now }
+  return db.transaction('rw', db.bottles, db.photos, db.settings, async () => {
+    const updated = await learnFromBottle({ ...existing, ...result.value, id, updatedAt: now }, existing)
     await db.bottles.put(updated)
 
     if (removePhotoIds.length > 0) {

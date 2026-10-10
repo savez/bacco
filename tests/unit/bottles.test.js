@@ -6,7 +6,9 @@ import {
   deleteBottle,
   getBottle,
   findSameLabel,
+  ValidationError,
 } from '../../src/db/bottles.js'
+import { getCustomLists } from '../../src/db/lists.js'
 
 const sample = () => ({ name: 'Tipopils', type: 'beer', rating: 5 })
 
@@ -238,5 +240,40 @@ describe('createBottle da un desiderio (specs/005-wishlist)', () => {
     const wishId = await addWish()
     await createBottle(sample())
     expect(await db.wishes.get(wishId)).toBeTruthy()
+  })
+})
+
+describe('elenchi personalizzabili (specs/006)', () => {
+  const wine = (extra) => ({ name: 'Derthona', type: 'wine', rating: 4, ...extra })
+
+  it('createBottle aggiunge una voce nuova all’elenco', async () => {
+    await createBottle(wine({ grape: 'Timorasso' }))
+    expect((await getCustomLists()).grape).toEqual([{ text: 'Timorasso', group: 'other' }])
+  })
+
+  it('createBottle con dati non validi non aggiunge voci', async () => {
+    await expect(createBottle(wine({ name: '', grape: 'Ruchè' }))).rejects.toThrow(ValidationError)
+    expect(await getCustomLists()).toEqual({})
+  })
+
+  it('createBottle con la stessa voce scritta diversamente salva quella dell’elenco', async () => {
+    await createBottle(wine({ grape: 'Timorasso' }))
+    const second = await createBottle(wine({ name: 'Altro', grape: 'timorasso' }))
+    expect(second.grape).toBe('Timorasso')
+    expect((await getCustomLists()).grape).toHaveLength(1)
+  })
+
+  it('updateBottle cambiando il vitigno aggiunge la voce nuova', async () => {
+    const bottle = await createBottle(wine({ grape: 'Timorasso' }))
+    await updateBottle(bottle.id, { ...bottle, grape: 'Ruchè' })
+    expect((await getCustomLists()).grape.map((e) => e.text)).toEqual(['Timorasso', 'Ruchè'])
+  })
+
+  it('updateBottle su un altro campo non riaggiunge una voce eliminata dall’elenco', async () => {
+    const bottle = await createBottle(wine({ grape: 'Timorasso' }))
+    await db.settings.clear() // la voce è stata eliminata dalle Impostazioni
+    await updateBottle(bottle.id, { ...bottle, rating: 5 })
+    expect(await getCustomLists()).toEqual({})
+    expect((await getBottle(bottle.id)).grape).toBe('Timorasso')
   })
 })

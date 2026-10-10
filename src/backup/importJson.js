@@ -1,6 +1,8 @@
 import { db } from '../db/db.js'
 import { validateBottle, validateMove, validateWish } from '../lib/validate.js'
 import { move } from '../db/bottles.js'
+import { SETTING_KEY, getCustomLists } from '../db/lists.js'
+import { parseCustomLists, mergeCustomLists } from '../lib/lists.js'
 
 const MAX_SIZE = 300 * 1024 * 1024
 // v1: solo bottiglie (Bacco 1.0); v2: anche cantina e movimenti (specs/002-cellar-inventory) e,
@@ -136,6 +138,11 @@ export async function importBackup(file, { makeThumbnail } = {}) {
     return { ...result.value, id: entry.id, createdAt: entry.createdAt, updatedAt: entry.updatedAt }
   })
 
+  // Voci aggiunte agli elenchi (specs/006-menu-personalizzabili): validate come il resto, poi
+  // unite a quelle presenti. Un backup senza `customLists` lascia gli elenchi com'erano. I valori
+  // delle bottiglie importate non entrano negli elenchi: ci sono solo le voci del file.
+  const customMerge = mergeCustomLists(await getCustomLists(), parseCustomLists(data.customLists))
+
   // Fase 1 (fuori dalla transazione): decide cosa aggiungere/aggiornare/lasciare
   // invariato, e prepara in anticipo solo le foto che verranno davvero scritte.
   const ids = validated.map((v) => v.bottle.id)
@@ -175,7 +182,8 @@ export async function importBackup(file, { makeThumbnail } = {}) {
   // Fase 2: transazione Dexie pura (solo put/delete), senza altri await in mezzo.
   // I movimenti seguono il record che vince l'unione: così la quantità resta coerente con
   // il registro (contracts/backup-format.md di specs/002-cellar-inventory).
-  await db.transaction('rw', db.bottles, db.photos, db.cellarMoves, db.wishes, async () => {
+  await db.transaction('rw', db.bottles, db.photos, db.cellarMoves, db.wishes, db.settings, async () => {
+    if (customMerge.changed) await db.settings.put({ key: SETTING_KEY, value: customMerge.value })
     if (wishesToWrite.length > 0) await db.wishes.bulkPut(wishesToWrite)
     for (const { action, bottle, photoRows } of toWrite) {
       if (action === 'update') {
