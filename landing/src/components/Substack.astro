@@ -1,0 +1,147 @@
+---
+// La newsletter dell'autore: stesso banner, prima del sostegno, in tutte e tre
+// le landing (nonAbbocco, bacco, fidality-card), ognuna nel suo stile.
+// Qui è un'etichetta da bottiglia: prima annata, color vino (--feccia), per
+// non fare il gemello del sostegno che è color luppolo.
+import { meta } from '../data/meta.js'
+---
+
+<a class="label" id="substack" href={`${meta.substackUrl}/subscribe`} rel="noopener noreferrer" target="_blank">
+  <span class="stamp" aria-hidden="true">
+    <span class="stamp-top">Annata</span>
+    <span class="stamp-year">2026</span>
+    <span class="stamp-bottom">N° 1</span>
+  </span>
+  <span class="body">
+    <span class="eyebrow">La newsletter di {meta.authorHandle} · su Substack</span>
+    <span class="title">SMZstudio, appena stappata.</span>
+    <span class="text">
+      Racconto come nascono Bacco e gli altri progetti, e quello che imparo strada facendo:
+      cloud, AI e codice, senza fronzoli. Iscriviti e il primo numero ti arriva per posta.
+    </span>
+    <span class="foot">
+      <span class="url">smzstudio.substack.com</span>
+      <span class="cta">Iscriviti gratis</span>
+    </span>
+  </span>
+</a>
+
+<style>
+  .label {
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    border-radius: var(--radius);
+    color: var(--gesso);
+    background:
+      radial-gradient(120% 140% at 0% 0%, rgba(201, 96, 127, 0.22), transparent 55%),
+      var(--doga);
+    border: 1px solid rgba(201, 96, 127, 0.45);
+    box-shadow: inset 0 0 0 6px var(--doga), inset 0 0 0 7px rgba(201, 96, 127, 0.25);
+    transition: transform 150ms ease, box-shadow 150ms ease;
+  }
+  .label:hover {
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 0 0 6px var(--doga),
+      inset 0 0 0 7px rgba(201, 96, 127, 0.4),
+      0 20px 40px -24px var(--feccia);
+  }
+  /* Il timbro sta nell'angolo, come su un'etichetta, e non ruba spazio al testo. */
+  .stamp {
+    position: absolute;
+    top: 1.1rem;
+    right: 1.1rem;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    width: 104px;
+    height: 104px;
+    border-radius: 999px;
+    border: 2px dashed var(--feccia);
+    color: var(--feccia);
+    transform: rotate(-8deg);
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .stamp-top,
+  .stamp-bottom {
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+  }
+  .stamp-year {
+    font-size: 2rem;
+    margin: 0.15rem 0;
+  }
+  .body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .eyebrow {
+    color: var(--feccia);
+    margin-bottom: 0.4rem;
+    max-width: calc(100% - 110px);
+  }
+  .title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    line-height: 0.95;
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    max-width: calc(100% - 110px);
+  }
+  .text {
+    color: var(--cenere);
+    margin-top: 0.75rem;
+    max-width: 56ch;
+  }
+  .foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.25rem;
+    width: 100%;
+    margin-top: auto;
+    padding-top: 1.4rem;
+  }
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 1.5rem;
+    border-radius: 999px;
+    background: var(--feccia);
+    color: var(--botte);
+    font-weight: 700;
+    box-shadow: 0 10px 30px -12px var(--feccia);
+  }
+  .url {
+    color: var(--cenere);
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+  }
+  .cta {
+    width: 100%;
+    justify-content: center;
+  }
+  @media (max-width: 640px) {
+    .stamp {
+      width: 84px;
+      height: 84px;
+    }
+    .stamp-year {
+      font-size: 1.6rem;
+    }
+    .eyebrow,
+    .title {
+      max-width: calc(100% - 88px);
+    }
+  }
+</style>

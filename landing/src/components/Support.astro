@@ -3,36 +3,33 @@
 import { meta } from '../data/meta.js'
 ---
 
-<section class="section" id="sostieni">
-  <div class="container">
-    <div class="support">
-      <span class="seal" aria-hidden="true">
-        <svg viewBox="0 0 32 32" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 9h8c0 5-1.6 7.5-4 7.5S5 14 5 9Z" fill="currentColor" fill-opacity=".35" />
-          <path d="M9 16.5V24M6 24h6" />
-          <rect x="16.5" y="11" width="8" height="13" rx="1.5" fill="currentColor" fill-opacity=".35" />
-          <path d="M24.5 14h1.5a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-1.5" />
-          <path d="M16 3.5v2.5M12.5 4.5l1.2 2M19.5 4.5l-1.2 2" />
-        </svg>
-      </span>
-      <div class="body">
-        <span class="eyebrow">Un progetto indipendente di {meta.authorHandle}</span>
-        <h2>Offrimi una birra o un vino.</h2>
-        <p>
-          Bacco è gratis, open source e senza pubblicità: lo sviluppo nel tempo libero.
-          Se ti piace, un brindisi aiuta.
-        </p>
-      </div>
-      <a class="cta" href={meta.supportUrl} rel="noopener noreferrer" target="_blank">Offrimi da bere</a>
-    </div>
+<div class="support">
+  <span class="seal" aria-hidden="true">
+    <svg viewBox="0 0 32 32" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 9h8c0 5-1.6 7.5-4 7.5S5 14 5 9Z" fill="currentColor" fill-opacity=".35" />
+      <path d="M9 16.5V24M6 24h6" />
+      <rect x="16.5" y="11" width="8" height="13" rx="1.5" fill="currentColor" fill-opacity=".35" />
+      <path d="M24.5 14h1.5a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-1.5" />
+      <path d="M16 3.5v2.5M12.5 4.5l1.2 2M19.5 4.5l-1.2 2" />
+    </svg>
+  </span>
+  <div class="body">
+    <span class="eyebrow">Un progetto indipendente di {meta.authorHandle}</span>
+    <h2>Offrimi una birra o un vino.</h2>
+    <p>
+      Bacco è gratis, open source e senza pubblicità: lo sviluppo nel tempo libero.
+      Se ti piace, un brindisi aiuta.
+    </p>
   </div>
-</section>
+  <a class="cta" href={meta.supportUrl} rel="noopener noreferrer" target="_blank">Offrimi da bere</a>
+</div>
 
 <style>
   .support {
+    height: 100%;
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     gap: clamp(1rem, 3vw, 2rem);
     padding: clamp(1.5rem, 4vw, 2.5rem);
     border-radius: 28px;
@@ -51,7 +48,7 @@ import { meta } from '../data/meta.js'
     color: var(--doga);
   }
   .body {
-    flex: 1 1 18rem;
+    flex: 1 1 auto;
   }
   .eyebrow {
     color: var(--luppolo);
@@ -80,10 +77,8 @@ import { meta } from '../data/meta.js'
     text-decoration: none;
     transform: translateY(-1px);
   }
-  @media (max-width: 640px) {
-    .cta {
-      width: 100%;
-      justify-content: center;
-    }
+  .cta {
+    width: 100%;
+    justify-content: center;
   }
 </style>

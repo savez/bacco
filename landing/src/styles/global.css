@@ -163,6 +163,18 @@ img {
   padding: 1.5rem;
 }
 
+.invites {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 860px) {
+  .invites {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .grid-3 {
   display: grid;
   gap: 1rem;

@@ -12,6 +12,7 @@ import Rating from '../components/Rating.astro'
 import Privacy from '../components/Privacy.astro'
 import Install from '../components/Install.astro'
 import OpenSource from '../components/OpenSource.astro'
+import Substack from '../components/Substack.astro'
 import Support from '../components/Support.astro'
 import Footer from '../components/Footer.astro'
 import { meta } from '../data/meta.js'
@@ -54,7 +55,13 @@ const ogImage = new URL(`${base}og.png`, Astro.site).href
       <div class="hoop"></div>
       <Install />
       <OpenSource />
-      <Support />
+      <!-- Newsletter e sostegno affiancati: due inviti dell'autore, una sola sezione. -->
+      <section class="section" id="sostieni">
+        <div class="container invites">
+          <Substack />
+          <Support />
+        </div>
+      </section>
     </main>
     <Footer />
   </body>
