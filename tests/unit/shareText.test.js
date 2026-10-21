@@ -30,13 +30,13 @@ describe('starsFor', () => {
 describe('shareText', () => {
   it('include il link se presente', () => {
     expect(shareText({ name: 'Barolo', externalUrl: 'https://example.com' })).toBe(
-      'Barolo — https://example.com\n\nRegistrato con Bacco · https://bacco-8in8.onrender.com',
+      'Barolo — https://example.com\n\nRegistrato con Bacco · https://bacco.smzstudio.it',
     )
   })
 
   it('restituisce solo il nome se non c\'è link', () => {
     expect(shareText({ name: 'Barolo', externalUrl: null })).toBe(
-      'Barolo\n\nRegistrato con Bacco · https://bacco-8in8.onrender.com',
+      'Barolo\n\nRegistrato con Bacco · https://bacco.smzstudio.it',
     )
   })
 })
