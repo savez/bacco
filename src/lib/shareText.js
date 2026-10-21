@@ -26,7 +26,7 @@ export function starsFor(rating) {
   return '★'.repeat(rating) + '☆'.repeat(5 - rating)
 }
 
-export const BACCO_SITE = 'bacco-8in8.onrender.com'
+export const BACCO_SITE = 'bacco.smzstudio.it'
 
 /** Testo che accompagna la card condivisa (contracts/share-card.md). @param {object} bottle */
 export function shareText(bottle) {
