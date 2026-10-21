@@ -4,6 +4,13 @@ Tutte le modifiche rilevanti del progetto sono documentate in questo file, gener
 [release-please](https://github.com/googleapis/release-please) a partire dai
 [Conventional Commits](https://www.conventionalcommits.org/it/).
 
+## [1.12.0](https://github.com/savez/bacco/compare/v1.11.4...v1.12.0) (2026-10-10)
+
+
+### ✨ Novità
+
+* elenchi personalizzabili per vitigno, tipologia, denominazione, aromi e abbinamenti ([#41](https://github.com/savez/bacco/issues/41)) ([6942d2b](https://github.com/savez/bacco/commit/6942d2b02dd7426b2dcc65f8272b023815bb01da))
+
 ## [1.11.4](https://github.com/savez/bacco/compare/v1.11.3...v1.11.4) (2026-10-10)
 
 
