@@ -4,6 +4,13 @@ Tutte le modifiche rilevanti del progetto sono documentate in questo file, gener
 [release-please](https://github.com/googleapis/release-please) a partire dai
 [Conventional Commits](https://www.conventionalcommits.org/it/).
 
+## [1.12.1](https://github.com/savez/bacco/compare/v1.12.0...v1.12.1) (2026-10-21)
+
+
+### 🐛 Correzioni
+
+* dominio bacco.smzstudio.it nella card e nel testo di condivisione ([#43](https://github.com/savez/bacco/issues/43)) ([cfe6b0f](https://github.com/savez/bacco/commit/cfe6b0f25eb585d652cee8ecf8ba709dbff6ffba))
+
 ## [1.12.0](https://github.com/savez/bacco/compare/v1.11.4...v1.12.0) (2026-10-10)
 
 
