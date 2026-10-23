@@ -4,6 +4,13 @@ Tutte le modifiche rilevanti del progetto sono documentate in questo file, gener
 [release-please](https://github.com/googleapis/release-please) a partire dai
 [Conventional Commits](https://www.conventionalcommits.org/it/).
 
+## [1.12.2](https://github.com/savez/bacco/compare/v1.12.1...v1.12.2) (2026-10-23)
+
+
+### 🐛 Correzioni
+
+* **deps:** versioni minime delle dipendenze runtime allineate a quelle pubblicate ([#46](https://github.com/savez/bacco/issues/46)) ([2be3e57](https://github.com/savez/bacco/commit/2be3e5719892f25f40c7749930df395be0c894dd))
+
 ## [1.12.1](https://github.com/savez/bacco/compare/v1.12.0...v1.12.1) (2026-10-21)
 
 
