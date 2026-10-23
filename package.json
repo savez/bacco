@@ -30,8 +30,8 @@
     "workbox-window": "^7.4.0"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.5.3",
-    "@commitlint/config-conventional": "^20.5.3",
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
     "@eslint/js": "^10.0.0",
     "@tailwindcss/vite": "^4.3.0",
     "@vite-pwa/assets-generator": "^2.0.0",
